@@ -101,6 +101,21 @@ impl SimpleGraph {
             .sum::<usize>()
             / 2
     }
+
+    pub fn get_isolated_vertices(&self) -> HashSet<usize> {
+        self.adjacency_list
+            .iter()
+            .filter(|(_, neighbors)| neighbors.is_empty())
+            .map(|(&vertex, _)| vertex)
+            .collect()
+    }
+
+    pub fn is_isolated(&self, vertex: usize) -> Result<bool, GraphError> {
+        self.adjacency_list
+            .get(&vertex)
+            .map(|neighbors| neighbors.is_empty())
+            .ok_or(GraphError::VertexNotFound)
+    }
 }
 
 impl Default for SimpleGraph {
