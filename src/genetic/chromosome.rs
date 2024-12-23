@@ -1,3 +1,5 @@
+use crate::graph::{self, SimpleGraph};
+
 #[derive(Debug, Clone)]
 pub struct Chromosome {
     genes: Vec<u8>,
@@ -26,6 +28,35 @@ impl Chromosome {
 
     pub fn genes(&self) -> Vec<u8> {
         self.genes.clone()
+    }
+
+    pub fn is_valid_to_total_roman_domination(&self, graph: &SimpleGraph) -> bool {
+        let genes = self.genes();
+
+        for vertex in 0..graph.vertex_count() {
+            if let Ok(neighbors) = graph.neighbors(vertex) {
+                match genes[vertex] {
+                    0 => {
+                        if !neighbors.iter().any(|&v| genes[v] == 2) {
+                            return false;
+                        }
+                    }
+                    1 => {
+                        if !neighbors.iter().any(|&v| genes[v] > 0) {
+                            return false;
+                        }
+                    }
+                    2 => {
+                        continue;
+                    }
+                    _ => return false, // Valores inválidos
+                }
+            } else {
+                return false; // Erro ao obter vizinhos
+            }
+        }
+
+        true
     }
 }
 
