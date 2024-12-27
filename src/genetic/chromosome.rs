@@ -41,13 +41,10 @@ impl Chromosome {
                             return false;
                         }
                     }
-                    1 => {
+                    1 | 2 => {
                         if !neighbors.iter().any(|&v| genes[v] > 0) {
                             return false;
                         }
-                    }
-                    2 => {
-                        continue;
                     }
                     _ => return false, // Valores inválidos
                 }
@@ -86,5 +83,140 @@ mod tests {
         let fitness_first = chromosome.fitness();
         let fitness_cached = chromosome.fitness();
         assert_eq!(fitness_first, fitness_cached);
+    }
+
+    #[test]
+    fn test_valid_solution() {
+        let mut graph = SimpleGraph::new();
+
+        // Cria um grafo com 5 vértices conectados em ciclo
+        for i in 0..5 {
+            graph.add_vertex(i).unwrap();
+        }
+        graph.add_edge(0, 1).unwrap();
+        graph.add_edge(1, 2).unwrap();
+        graph.add_edge(2, 3).unwrap();
+        graph.add_edge(3, 4).unwrap();
+        graph.add_edge(4, 0).unwrap();
+
+        // Solução válida
+        let valid_chromosome = Chromosome::new(vec![2, 0, 0, 2, 1]);
+
+        assert!(
+            valid_chromosome.is_valid_to_total_roman_domination(&graph),
+            "The chromosome should be valid"
+        );
+    }
+
+    #[test]
+    fn test_invalid_solution_vertex_0() {
+        let mut graph = SimpleGraph::new();
+
+        // Cria um grafo com 5 vértices conectados em ciclo
+        for i in 0..5 {
+            graph.add_vertex(i).unwrap();
+        }
+        graph.add_edge(0, 1).unwrap();
+        graph.add_edge(1, 2).unwrap();
+        graph.add_edge(2, 3).unwrap();
+        graph.add_edge(3, 4).unwrap();
+        graph.add_edge(4, 0).unwrap();
+
+        // Solução inválida: vértice 0 com f(v) = 0 não tem vizinho com f(u) = 2
+        let invalid_chromosome = Chromosome::new(vec![0, 0, 1, 2, 0]);
+
+        assert!(
+            !invalid_chromosome.is_valid_to_total_roman_domination(&graph),
+            "The chromosome should be invalid because vertex 0 is not protected"
+        );
+    }
+
+    #[test]
+    fn test_invalid_solution_vertex_3() {
+        let mut graph = SimpleGraph::new();
+
+        // Cria um grafo com 5 vértices conectados em ciclo
+        for i in 0..5 {
+            graph.add_vertex(i).unwrap();
+        }
+        graph.add_edge(0, 1).unwrap();
+        graph.add_edge(1, 2).unwrap();
+        graph.add_edge(2, 3).unwrap();
+        graph.add_edge(3, 4).unwrap();
+        graph.add_edge(4, 0).unwrap();
+
+        // Solução inválida: vértice 3 com f(v) = 2 não tem vizinho com f(u) > 0
+        let invalid_chromosome = Chromosome::new(vec![2, 0, 0, 2, 0]);
+
+        assert!(
+            !invalid_chromosome.is_valid_to_total_roman_domination(&graph),
+            "The chromosome should be invalid because vertex 3 lacks a neighbor with f(u) > 0"
+        );
+    }
+
+    #[test]
+    fn test_invalid_solution_invalid_gene() {
+        let mut graph = SimpleGraph::new();
+
+        // Cria um grafo com 5 vértices conectados em ciclo
+        for i in 0..5 {
+            graph.add_vertex(i).unwrap();
+        }
+        graph.add_edge(0, 1).unwrap();
+        graph.add_edge(1, 2).unwrap();
+        graph.add_edge(2, 3).unwrap();
+        graph.add_edge(3, 4).unwrap();
+        graph.add_edge(4, 0).unwrap();
+
+        // Solução inválida: vértice 2 com um valor de gene inválido (f(v) = 3)
+        let invalid_chromosome = Chromosome::new(vec![2, 1, 3, 0, 1]);
+
+        assert!(
+            !invalid_chromosome.is_valid_to_total_roman_domination(&graph),
+            "The chromosome should be invalid due to an invalid gene value"
+        );
+    }
+
+    #[test]
+    fn test_empty_graph() {
+        let graph = SimpleGraph::new();
+
+        // Cromossomo vazio para um grafo vazio
+        let empty_chromosome = Chromosome::new(vec![]);
+
+        assert!(
+            empty_chromosome.is_valid_to_total_roman_domination(&graph),
+            "An empty chromosome should be valid for an empty graph"
+        );
+    }
+
+    #[test]
+    fn test_single_vertex_graph_valid() {
+        let mut graph = SimpleGraph::new();
+
+        graph.add_vertex(0).unwrap();
+
+        // Solução inválida: vértice isolado com f(v) = 2
+        let valid_chromosome = Chromosome::new(vec![2]);
+
+        assert!(
+            !valid_chromosome.is_valid_to_total_roman_domination(&graph),
+            "The chromosome should be invalid for a single vertex with f(v) = 2"
+        );
+    }
+
+    #[test]
+    fn test_single_vertex_graph_invalid() {
+        let mut graph = SimpleGraph::new();
+
+        graph.add_vertex(0).unwrap();
+
+        // Solução inválida: vértice isolado com f(v) = 0
+        let invalid_chromosome = Chromosome::new(vec![0]);
+
+        assert!(
+            !invalid_chromosome.is_valid_to_total_roman_domination(&graph),
+            "The chromosome should be invalid for a single vertex with f(v) = 0"
+        );
     }
 }
