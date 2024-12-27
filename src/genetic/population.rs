@@ -165,6 +165,11 @@ impl Population {
         self.individuals.push(individual);
         self.size = self.individuals.len();
     }
+
+    pub fn new_from_individuals(individuals: Vec<Chromosome>) -> Population {
+        let size = individuals.len();
+        Self { individuals, size }
+    }
 }
 
 #[cfg(test)]
