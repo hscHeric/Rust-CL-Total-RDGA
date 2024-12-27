@@ -4,7 +4,7 @@ use crate::graph::SimpleGraph;
 
 use super::Chromosome;
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct Population {
     individuals: Vec<Chromosome>,
     size: usize,
@@ -159,6 +159,11 @@ impl Population {
         }
 
         Ok(self.individuals[best_index].clone())
+    }
+
+    pub fn add_individual(&mut self, individual: Chromosome) {
+        self.individuals.push(individual);
+        self.size = self.individuals.len();
     }
 }
 
