@@ -64,9 +64,9 @@ impl Population {
         for _ in 0..max_attempts {
             // Gera genes aleatórios
             let genes: Vec<u8> = (0..vertex_count).map(|_| rng.gen_range(0..=2)).collect();
-            let mut chromosome = Chromosome::new(genes);
+            let chromosome = Chromosome::new(genes);
 
-            chromosome.fix_chromosome(graph);
+            let chromosome = chromosome.fix_chromosome(graph);
 
             if chromosome.is_valid_to_total_roman_domination(graph) {
                 return chromosome;
@@ -110,12 +110,20 @@ impl Population {
         Ok(self.individuals[best_index].clone())
     }
 
-    pub fn validade_population(&mut self, graph: &SimpleGraph) {
-        for individual in &mut self.individuals {
-            if !individual.is_valid_to_total_roman_domination(graph) {
-                individual.fix_chromosome(graph);
-            }
-        }
+    pub fn validate_population(&self, graph: &SimpleGraph) -> Population {
+        let validated_individuals: Vec<Chromosome> = self
+            .individuals
+            .iter()
+            .map(|individual| {
+                if individual.is_valid_to_total_roman_domination(graph) {
+                    individual.clone()
+                } else {
+                    individual.fix_chromosome(graph)
+                }
+            })
+            .collect();
+
+        Population::new_from_individuals(validated_individuals)
     }
 
     pub fn new_from_individuals(individuals: Vec<Chromosome>) -> Population {
@@ -229,10 +237,11 @@ mod tests {
         let population = Population::new(&graph, heuristics, population_size).unwrap();
 
         for (index, individual) in population.individuals().iter().enumerate() {
-            let mut corrected_individual = individual.clone(); // Clone o indivíduo para manipulação
-            if !corrected_individual.is_valid_to_total_roman_domination(&graph) {
-                corrected_individual.fix_chromosome(&graph); // Tenta corrigir o cromossomo
-            }
+            let corrected_individual = if individual.is_valid_to_total_roman_domination(&graph) {
+                individual.clone()
+            } else {
+                individual.fix_chromosome(&graph)
+            };
 
             assert!(
                 corrected_individual.is_valid_to_total_roman_domination(&graph),
