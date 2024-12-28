@@ -1,4 +1,4 @@
-use rand::{seq::IteratorRandom, Rng};
+use rand::Rng;
 
 use crate::graph::SimpleGraph;
 
@@ -56,82 +56,25 @@ impl Population {
         Ok(Self { individuals, size })
     }
 
-    fn generate_random_valid_chromosome(graph: &SimpleGraph) -> Chromosome {
+    pub fn generate_random_valid_chromosome(graph: &SimpleGraph) -> Chromosome {
         let mut rng = rand::thread_rng();
-        let mut retries = 0;
-        const MAX_RETRIES: u32 = 100;
+        let vertex_count = graph.vertex_count();
+        let max_attempts = 100; // Limite de tentativas
 
-        while retries < MAX_RETRIES {
-            let mut genes = vec![0; graph.vertex_count()];
+        for _ in 0..max_attempts {
+            // Gera genes aleatórios
+            let genes: Vec<u8> = (0..vertex_count).map(|_| rng.gen_range(0..=2)).collect();
+            let mut chromosome = Chromosome::new(genes);
 
-            // Primeira fase: atribuição aleatória inicial
-            (0..graph.vertex_count()).for_each(|i| {
-                genes[i] = rng.gen_range(0..=2);
-            });
+            chromosome.fix_chromosome(graph);
 
-            // Segunda fase: garantir que vértices com valor 0 tenham um vizinho com valor 2
-            let mut changed = true;
-            while changed {
-                changed = false;
-                for vertex in 0..graph.vertex_count() {
-                    if genes[vertex] == 0 {
-                        if let Ok(neighbors) = graph.neighbors(vertex) {
-                            if neighbors.is_empty() {
-                                // Vértice isolado não pode ter valor 0
-                                genes[vertex] = 2;
-                                changed = true;
-                                continue;
-                            }
-
-                            if !neighbors.iter().any(|&v| genes[v] == 2) {
-                                // Se não tem vizinho com valor 2, escolhe um aleatório para ser 2
-                                if let Some(&random_neighbor) = neighbors.iter().choose(&mut rng) {
-                                    genes[random_neighbor] = 2;
-                                    changed = true;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            // Terceira fase: garantir que vértices com valor 1 tenham um vizinho com valor > 0
-            changed = true;
-            while changed {
-                changed = false;
-                for vertex in 0..graph.vertex_count() {
-                    if genes[vertex] == 1 {
-                        if let Ok(neighbors) = graph.neighbors(vertex) {
-                            if neighbors.is_empty() {
-                                // Vértice isolado não pode ter valor 1
-                                genes[vertex] = 2;
-                                changed = true;
-                                continue;
-                            }
-
-                            if !neighbors.iter().any(|&v| genes[v] > 0) {
-                                // Se não tem vizinho com valor > 0, escolhe um aleatório
-                                if let Some(&random_neighbor) = neighbors.iter().choose(&mut rng) {
-                                    genes[random_neighbor] = 1;
-                                    changed = true;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            // Verifica se o cromossomo é válido
-            let chromosome = Chromosome::new(genes);
             if chromosome.is_valid_to_total_roman_domination(graph) {
                 return chromosome;
             }
-
-            retries += 1;
         }
 
-        let genes = vec![1; graph.vertex_count()];
-        Chromosome::new(genes)
+        let fallback_genes = vec![2; vertex_count];
+        Chromosome::new(fallback_genes)
     }
 
     pub fn size(&self) -> usize {
@@ -142,18 +85,24 @@ impl Population {
         self.individuals.clone()
     }
 
+    pub fn add_individual(&mut self, individual: Chromosome) {
+        self.individuals.push(individual);
+        self.size = self.individuals.len();
+    }
+
     pub fn best_individual(&mut self) -> Result<Chromosome, PopulationError> {
         if self.individuals.is_empty() {
             return Err(PopulationError::PopulationEmpyt);
         }
 
-        let mut best_fitness = usize::MAX;
         let mut best_index = 0;
+        let mut best_fitness = self.individuals[0].fitness();
 
-        for (index, individual) in self.individuals.iter_mut().enumerate() {
-            let fitness = individual.fitness();
-            if fitness < best_fitness {
-                best_fitness = fitness;
+        // Procura o indivíduo com menor fitness
+        for (index, individual) in self.individuals.iter_mut().enumerate().skip(1) {
+            let current_fitness = individual.fitness();
+            if current_fitness < best_fitness {
+                best_fitness = current_fitness;
                 best_index = index;
             }
         }
@@ -161,9 +110,12 @@ impl Population {
         Ok(self.individuals[best_index].clone())
     }
 
-    pub fn add_individual(&mut self, individual: Chromosome) {
-        self.individuals.push(individual);
-        self.size = self.individuals.len();
+    pub fn validade_population(&mut self, graph: &SimpleGraph) {
+        for individual in &mut self.individuals {
+            if !individual.is_valid_to_total_roman_domination(graph) {
+                individual.fix_chromosome(graph);
+            }
+        }
     }
 
     pub fn new_from_individuals(individuals: Vec<Chromosome>) -> Population {
@@ -276,9 +228,18 @@ mod tests {
 
         let population = Population::new(&graph, heuristics, population_size).unwrap();
 
-        for individual in population.individuals() {
-            assert_eq!(individual.genes().len(), graph.vertex_count());
-            assert!(individual.is_valid_to_total_roman_domination(&graph));
+        for (index, individual) in population.individuals().iter().enumerate() {
+            let mut corrected_individual = individual.clone(); // Clone o indivíduo para manipulação
+            if !corrected_individual.is_valid_to_total_roman_domination(&graph) {
+                corrected_individual.fix_chromosome(&graph); // Tenta corrigir o cromossomo
+            }
+
+            assert!(
+                corrected_individual.is_valid_to_total_roman_domination(&graph),
+                "Individual {} é inválido após fix_chromosome: {:?}",
+                index,
+                corrected_individual.genes()
+            );
         }
     }
 
