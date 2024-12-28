@@ -116,6 +116,22 @@ impl SimpleGraph {
             .map(|neighbors| neighbors.is_empty())
             .ok_or(GraphError::VertexNotFound)
     }
+
+    pub fn from_edges(edges: Vec<(usize, usize)>) -> Result<Self, GraphError> {
+        let mut graph = SimpleGraph::new();
+
+        for (u, v) in edges {
+            if !graph.adjacency_list.contains_key(&u) {
+                graph.add_vertex(u)?;
+            }
+            if !graph.adjacency_list.contains_key(&v) {
+                graph.add_vertex(v)?;
+            }
+            graph.add_edge(u, v)?;
+        }
+
+        Ok(graph)
+    }
 }
 
 impl Default for SimpleGraph {
