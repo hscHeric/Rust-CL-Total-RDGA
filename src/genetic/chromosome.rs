@@ -1,4 +1,6 @@
-use crate::graph::{self, SimpleGraph};
+use rand::seq::SliceRandom;
+
+use crate::graph::SimpleGraph;
 
 #[derive(Debug, Clone)]
 pub struct Chromosome {
@@ -54,6 +56,51 @@ impl Chromosome {
         }
 
         true
+    }
+
+    pub fn fix_chromosome(&mut self, graph: &SimpleGraph) {
+        let mut rng = rand::thread_rng();
+        let vertex_count = graph.vertex_count();
+
+        for vertex in 0..vertex_count {
+            if let Ok(neighbors) = graph.neighbors(vertex) {
+                let neighbors_vec: Vec<usize> = neighbors.iter().copied().collect();
+
+                match self.genes[vertex] {
+                    // Caso f(v) = 0
+                    0 => {
+                        // Verifica se existe vizinho com rótulo 2
+                        let has_neighbor_with_2 = neighbors_vec.iter().any(|&n| self.genes[n] == 2);
+
+                        // Se não existe vizinho com rótulo 2, seleciona aleatoriamente um vizinho
+                        // e rotula com 1
+                        if !has_neighbor_with_2 && !neighbors_vec.is_empty() {
+                            if let Some(&random_neighbor) = neighbors_vec.choose(&mut rng) {
+                                self.genes[random_neighbor] = 1;
+                            }
+                        }
+                    }
+                    // Caso f(v) > 0
+                    1 | 2 => {
+                        // Verifica se existe vizinho com rótulo > 0
+                        let has_neighbor_greater_than_0 =
+                            neighbors_vec.iter().any(|&n| self.genes[n] > 0);
+
+                        // Se não existe vizinho com rótulo > 0, seleciona aleatoriamente um vizinho
+                        // e rotula com 1
+                        if !has_neighbor_greater_than_0 && !neighbors_vec.is_empty() {
+                            if let Some(&random_neighbor) = neighbors_vec.choose(&mut rng) {
+                                self.genes[random_neighbor] = 1;
+                            }
+                        }
+                    }
+                    // Caso inválido (não deveria ocorrer)
+                    _ => self.genes[vertex] = 0,
+                }
+            }
+        }
+        // Reseta o fitness já que o cromossomo foi modificado
+        self.fitness = None;
     }
 }
 
