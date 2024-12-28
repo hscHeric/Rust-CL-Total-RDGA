@@ -1,3 +1,4 @@
+pub mod parser;
 pub mod simple_graph;
 
 pub use simple_graph::GraphError;
