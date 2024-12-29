@@ -14,10 +14,15 @@ pub struct TwoPointCrossover {
 
 impl CrossoverStrategy for TwoPointCrossover {
     fn crossover(&self, population: &Population, graph: &SimpleGraph) -> Population {
+        if self.crossover_rate == 0.0 {
+            return population.clone();
+        }
+
         let mut rng = rand::thread_rng();
         let mut new_individuals = Vec::with_capacity(population.size());
-        let mut shuffled_individuals = population.individuals();
+        let shuffled_individuals = population.individuals();
 
+        let mut shuffled_individuals = shuffled_individuals.to_vec();
         shuffled_individuals.shuffle(&mut rng);
 
         for pair in shuffled_individuals.chunks(2) {
@@ -91,10 +96,10 @@ mod tests {
             assert_eq!(child_a.genes().len(), 4);
             assert_eq!(child_b.genes().len(), 4);
 
-            for gene in child_a.genes() {
+            for &gene in child_a.genes() {
                 assert!(gene <= 2, "Invalid gene in child_a: {}", gene);
             }
-            for gene in child_b.genes() {
+            for &gene in child_b.genes() {
                 assert!(gene <= 2, "Invalid gene in child_b: {}", gene);
             }
         }
@@ -171,7 +176,7 @@ mod tests {
         let parent_a = Chromosome::new(vec![2, 1, 1, 2]);
         let parent_b = Chromosome::new(vec![1, 2, 2, 1]);
 
-        let (mut child_a, mut child_b) = two_point_crossover(&parent_a, &parent_b);
+        let (child_a, child_b) = two_point_crossover(&parent_a, &parent_b);
 
         assert_eq!(
             child_a.fitness(),
@@ -194,6 +199,31 @@ mod tests {
             valid_child_b.is_valid_to_total_roman_domination(&graph),
             "Child B invalid after fix: {:?}",
             valid_child_b.genes()
+        );
+    }
+
+    #[test]
+    fn test_population_size_after_crossover() {
+        let graph = create_test_graph();
+
+        let individuals = vec![
+            Chromosome::new(vec![2, 1, 1, 2]),
+            Chromosome::new(vec![1, 2, 2, 1]),
+            Chromosome::new(vec![2, 2, 1, 1]),
+            Chromosome::new(vec![1, 1, 2, 2]),
+        ];
+        let initial_population = Population::new_from_individuals(individuals);
+
+        let strategy = TwoPointCrossover {
+            crossover_rate: 0.5,
+        };
+
+        let new_population = strategy.crossover(&initial_population, &graph);
+
+        assert_eq!(
+            new_population.size(),
+            initial_population.size(),
+            "The population size after crossover should remain the same"
         );
     }
 }

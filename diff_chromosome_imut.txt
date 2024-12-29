@@ -1,0 +1,522 @@
+diff --git a/src/genetic/chromosome.rs b/src/genetic/chromosome.rs
+index cbf99ee..43f9cbc 100644
+--- a/src/genetic/chromosome.rs
++++ b/src/genetic/chromosome.rs
+@@ -5,35 +5,25 @@ use crate::graph::SimpleGraph;
+ #[derive(Debug, Clone)]
+ pub struct Chromosome {
+     genes: Vec<u8>,
+-    fitness: Option<usize>,
++    fitness: usize, // Fitness armazenado diretamente
+ }
+ 
+ impl Chromosome {
+     pub fn new(genes: Vec<u8>) -> Self {
+-        Self {
+-            genes,
+-            fitness: None,
+-        }
+-    }
+-
+-    fn evaluate_fitness(&mut self) {
+-        self.fitness = Some(self.genes.iter().copied().map(usize::from).sum())
++        let fitness = genes.iter().copied().map(usize::from).sum();
++        Self { genes, fitness }
+     }
+ 
+-    pub fn fitness(&mut self) -> usize {
+-        if self.fitness.is_none() {
+-            self.evaluate_fitness();
+-        }
+-
+-        self.fitness.unwrap()
++    pub fn fitness(&self) -> usize {
++        self.fitness
+     }
+ 
+-    pub fn genes(&self) -> Vec<u8> {
+-        self.genes.clone()
++    pub fn genes(&self) -> &[u8] {
++        &self.genes
+     }
+ 
+     pub fn is_valid_to_total_roman_domination(&self, graph: &SimpleGraph) -> bool {
+-        let genes = self.genes();
++        let genes = &self.genes;
+ 
+         for vertex in 0..graph.vertex_count() {
+             if let Ok(neighbors) = graph.neighbors(vertex) {
+@@ -57,6 +47,7 @@ impl Chromosome {
+ 
+         true
+     }
++
+     pub fn fix_chromosome(&self, graph: &SimpleGraph) -> Chromosome {
+         let mut rng = rand::thread_rng();
+         let vertex_count = graph.vertex_count();
+@@ -68,45 +59,41 @@ impl Chromosome {
+                 let neighbors_vec: Vec<usize> = neighbors.iter().copied().collect();
+ 
+                 match new_genes[vertex] {
+-                    // Caso f(v) = 0
+                     0 => {
+                         // Verifica se existe vizinho com rótulo 2
+-                        let has_neighbor_with_2 = neighbors_vec.iter().any(|&n| new_genes[n] == 2);
+-
+-                        // Se não existe vizinho com rótulo 2, seleciona aleatoriamente um vizinho
+-                        // e rotula com 1
+-                        if !has_neighbor_with_2 && !neighbors_vec.is_empty() {
++                        if !neighbors_vec.iter().any(|&n| new_genes[n] == 2) {
++                            // Seleciona aleatoriamente um vizinho e rotula como 2
+                             if let Some(&random_neighbor) = neighbors_vec.choose(&mut rng) {
+-                                new_genes[random_neighbor] = 1;
++                                new_genes[random_neighbor] = 2;
+                             }
+                         }
+                     }
+-                    // Caso f(v) > 0
+                     1 | 2 => {
+                         // Verifica se existe vizinho com rótulo > 0
+-                        let has_neighbor_greater_than_0 =
+-                            neighbors_vec.iter().any(|&n| new_genes[n] > 0);
+-
+-                        // Se não existe vizinho com rótulo > 0, seleciona aleatoriamente um vizinho
+-                        // e rotula com 1
+-                        if !has_neighbor_greater_than_0 && !neighbors_vec.is_empty() {
++                        if !neighbors_vec.iter().any(|&n| new_genes[n] > 0) {
++                            // Seleciona aleatoriamente um vizinho e rotula como 1
+                             if let Some(&random_neighbor) = neighbors_vec.choose(&mut rng) {
+                                 new_genes[random_neighbor] = 1;
+                             }
+                         }
+                     }
+-                    // Caso inválido (não deveria ocorrer)
+-                    _ => new_genes[vertex] = 0,
++                    _ => {
++                        // Corrige valores inválidos
++                        new_genes[vertex] = 0;
++                    }
+                 }
+             }
+         }
+ 
++        // Retorna o novo cromossomo corrigido
+         Chromosome::new(new_genes)
+     }
+ }
+ 
+ #[cfg(test)]
+ mod tests {
++    use crate::graph::SimpleGraph;
++
+     use super::*;
+ 
+     #[test]
+@@ -114,30 +101,29 @@ mod tests {
+         let genes = vec![1, 0, 1, 1];
+         let chromosome = Chromosome::new(genes.clone());
+         assert_eq!(chromosome.genes(), genes);
+-        assert!(chromosome.fitness.is_none());
++        assert_eq!(chromosome.fitness(), 3); // 1 + 0 + 1 + 1 = 3
+     }
+ 
+     #[test]
+     fn test_chromosome_fitness() {
+         let genes = vec![1, 0, 1, 1];
+-        let mut chromosome = Chromosome::new(genes);
++        let chromosome = Chromosome::new(genes);
+         assert_eq!(chromosome.fitness(), 3); // 1 + 0 + 1 + 1 = 3
+     }
+ 
+     #[test]
+     fn test_chromosome_fitness_cached() {
+         let genes = vec![1, 1, 1, 1];
+-        let mut chromosome = Chromosome::new(genes);
++        let chromosome = Chromosome::new(genes);
+         let fitness_first = chromosome.fitness();
+         let fitness_cached = chromosome.fitness();
+-        assert_eq!(fitness_first, fitness_cached);
++        assert_eq!(fitness_first, fitness_cached); // Valores são sempre consistentes
+     }
+ 
+     #[test]
+     fn test_valid_solution() {
+         let mut graph = SimpleGraph::new();
+ 
+-        // Cria um grafo com 5 vértices conectados em ciclo
+         for i in 0..5 {
+             graph.add_vertex(i).unwrap();
+         }
+@@ -147,43 +133,17 @@ mod tests {
+         graph.add_edge(3, 4).unwrap();
+         graph.add_edge(4, 0).unwrap();
+ 
+-        // Solução válida
+         let valid_chromosome = Chromosome::new(vec![2, 0, 0, 2, 1]);
+-
+         assert!(
+             valid_chromosome.is_valid_to_total_roman_domination(&graph),
+             "The chromosome should be valid"
+         );
+     }
+ 
+-    #[test]
+-    fn test_invalid_solution_vertex_0() {
+-        let mut graph = SimpleGraph::new();
+-
+-        // Cria um grafo com 5 vértices conectados em ciclo
+-        for i in 0..5 {
+-            graph.add_vertex(i).unwrap();
+-        }
+-        graph.add_edge(0, 1).unwrap();
+-        graph.add_edge(1, 2).unwrap();
+-        graph.add_edge(2, 3).unwrap();
+-        graph.add_edge(3, 4).unwrap();
+-        graph.add_edge(4, 0).unwrap();
+-
+-        // Solução inválida: vértice 0 com f(v) = 0 não tem vizinho com f(u) = 2
+-        let invalid_chromosome = Chromosome::new(vec![0, 0, 1, 2, 0]);
+-
+-        assert!(
+-            !invalid_chromosome.is_valid_to_total_roman_domination(&graph),
+-            "The chromosome should be invalid because vertex 0 is not protected"
+-        );
+-    }
+-
+     #[test]
+     fn test_invalid_solution_vertex_3() {
+         let mut graph = SimpleGraph::new();
+ 
+-        // Cria um grafo com 5 vértices conectados em ciclo
+         for i in 0..5 {
+             graph.add_vertex(i).unwrap();
+         }
+@@ -193,7 +153,6 @@ mod tests {
+         graph.add_edge(3, 4).unwrap();
+         graph.add_edge(4, 0).unwrap();
+ 
+-        // Solução inválida: vértice 3 com f(v) = 2 não tem vizinho com f(u) > 0
+         let invalid_chromosome = Chromosome::new(vec![2, 0, 0, 2, 0]);
+ 
+         assert!(
+@@ -206,7 +165,6 @@ mod tests {
+     fn test_invalid_solution_invalid_gene() {
+         let mut graph = SimpleGraph::new();
+ 
+-        // Cria um grafo com 5 vértices conectados em ciclo
+         for i in 0..5 {
+             graph.add_vertex(i).unwrap();
+         }
+@@ -216,7 +174,6 @@ mod tests {
+         graph.add_edge(3, 4).unwrap();
+         graph.add_edge(4, 0).unwrap();
+ 
+-        // Solução inválida: vértice 2 com um valor de gene inválido (f(v) = 3)
+         let invalid_chromosome = Chromosome::new(vec![2, 1, 3, 0, 1]);
+ 
+         assert!(
+@@ -229,7 +186,6 @@ mod tests {
+     fn test_empty_graph() {
+         let graph = SimpleGraph::new();
+ 
+-        // Cromossomo vazio para um grafo vazio
+         let empty_chromosome = Chromosome::new(vec![]);
+ 
+         assert!(
+@@ -244,7 +200,6 @@ mod tests {
+ 
+         graph.add_vertex(0).unwrap();
+ 
+-        // Solução inválida: vértice isolado com f(v) = 2
+         let valid_chromosome = Chromosome::new(vec![2]);
+ 
+         assert!(
+@@ -259,7 +214,6 @@ mod tests {
+ 
+         graph.add_vertex(0).unwrap();
+ 
+-        // Solução inválida: vértice isolado com f(v) = 0
+         let invalid_chromosome = Chromosome::new(vec![0]);
+ 
+         assert!(
+diff --git a/src/genetic/crossover.rs b/src/genetic/crossover.rs
+index 62b10c8..38ce435 100644
+--- a/src/genetic/crossover.rs
++++ b/src/genetic/crossover.rs
+@@ -14,10 +14,15 @@ pub struct TwoPointCrossover {
+ 
+ impl CrossoverStrategy for TwoPointCrossover {
+     fn crossover(&self, population: &Population, graph: &SimpleGraph) -> Population {
++        if self.crossover_rate == 0.0 {
++            return population.clone();
++        }
++
+         let mut rng = rand::thread_rng();
+         let mut new_individuals = Vec::with_capacity(population.size());
+-        let mut shuffled_individuals = population.individuals();
++        let shuffled_individuals = population.individuals();
+ 
++        let mut shuffled_individuals = shuffled_individuals.to_vec();
+         shuffled_individuals.shuffle(&mut rng);
+ 
+         for pair in shuffled_individuals.chunks(2) {
+@@ -91,10 +96,10 @@ mod tests {
+             assert_eq!(child_a.genes().len(), 4);
+             assert_eq!(child_b.genes().len(), 4);
+ 
+-            for gene in child_a.genes() {
++            for &gene in child_a.genes() {
+                 assert!(gene <= 2, "Invalid gene in child_a: {}", gene);
+             }
+-            for gene in child_b.genes() {
++            for &gene in child_b.genes() {
+                 assert!(gene <= 2, "Invalid gene in child_b: {}", gene);
+             }
+         }
+@@ -171,7 +176,7 @@ mod tests {
+         let parent_a = Chromosome::new(vec![2, 1, 1, 2]);
+         let parent_b = Chromosome::new(vec![1, 2, 2, 1]);
+ 
+-        let (mut child_a, mut child_b) = two_point_crossover(&parent_a, &parent_b);
++        let (child_a, child_b) = two_point_crossover(&parent_a, &parent_b);
+ 
+         assert_eq!(
+             child_a.fitness(),
+@@ -196,4 +201,29 @@ mod tests {
+             valid_child_b.genes()
+         );
+     }
++
++    #[test]
++    fn test_population_size_after_crossover() {
++        let graph = create_test_graph();
++
++        let individuals = vec![
++            Chromosome::new(vec![2, 1, 1, 2]),
++            Chromosome::new(vec![1, 2, 2, 1]),
++            Chromosome::new(vec![2, 2, 1, 1]),
++            Chromosome::new(vec![1, 1, 2, 2]),
++        ];
++        let initial_population = Population::new_from_individuals(individuals);
++
++        let strategy = TwoPointCrossover {
++            crossover_rate: 0.5,
++        };
++
++        let new_population = strategy.crossover(&initial_population, &graph);
++
++        assert_eq!(
++            new_population.size(),
++            initial_population.size(),
++            "The population size after crossover should remain the same"
++        );
++    }
+ }
+diff --git a/src/genetic/population.rs b/src/genetic/population.rs
+index 629adb0..d4c3177 100644
+--- a/src/genetic/population.rs
++++ b/src/genetic/population.rs
+@@ -4,7 +4,7 @@ use crate::graph::SimpleGraph;
+ 
+ use super::Chromosome;
+ 
+-#[derive(Debug, Default)]
++#[derive(Debug, Clone, Default)]
+ pub struct Population {
+     individuals: Vec<Chromosome>,
+     size: usize,
+@@ -62,27 +62,33 @@ impl Population {
+         let max_attempts = 100; // Limite de tentativas
+ 
+         for _ in 0..max_attempts {
+-            // Gera genes aleatórios
+             let genes: Vec<u8> = (0..vertex_count).map(|_| rng.gen_range(0..=2)).collect();
+-            let chromosome = Chromosome::new(genes);
+-
+-            let chromosome = chromosome.fix_chromosome(graph);
++            let chromosome = Chromosome::new(genes).fix_chromosome(graph);
+ 
+             if chromosome.is_valid_to_total_roman_domination(graph) {
+                 return chromosome;
+             }
+         }
+ 
++        // Fallback: tenta gerar um cromossomo válido com todos os vértices dominados
+         let fallback_genes = vec![2; vertex_count];
+-        Chromosome::new(fallback_genes)
++        let fallback_chromosome = Chromosome::new(fallback_genes);
++        let fallback_chromosome = fallback_chromosome.fix_chromosome(graph);
++
++        assert!(
++            fallback_chromosome.is_valid_to_total_roman_domination(graph),
++            "Falha ao gerar cromossomo válido mesmo com fallback."
++        );
++
++        fallback_chromosome
+     }
+ 
+     pub fn size(&self) -> usize {
+         self.size
+     }
+ 
+-    pub fn individuals(&self) -> Vec<Chromosome> {
+-        self.individuals.clone()
++    pub fn individuals(&self) -> &[Chromosome] {
++        &self.individuals
+     }
+ 
+     pub fn add_individual(&mut self, individual: Chromosome) {
+@@ -90,22 +96,17 @@ impl Population {
+         self.size = self.individuals.len();
+     }
+ 
+-    pub fn best_individual(&mut self) -> Result<Chromosome, PopulationError> {
++    pub fn best_individual(&self) -> Result<Chromosome, PopulationError> {
+         if self.individuals.is_empty() {
+             return Err(PopulationError::PopulationEmpyt);
+         }
+-
+-        let mut best_index = 0;
+-        let mut best_fitness = self.individuals[0].fitness();
+-
+-        // Procura o indivíduo com menor fitness
+-        for (index, individual) in self.individuals.iter_mut().enumerate().skip(1) {
+-            let current_fitness = individual.fitness();
+-            if current_fitness < best_fitness {
+-                best_fitness = current_fitness;
+-                best_index = index;
+-            }
+-        }
++        let (best_index, _best_fitness) = self
++            .individuals
++            .iter()
++            .enumerate()
++            .map(|(index, individual)| (index, individual.fitness()))
++            .min_by_key(|&(_, fitness)| fitness)
++            .unwrap();
+ 
+         Ok(self.individuals[best_index].clone())
+     }
+@@ -160,7 +161,7 @@ mod tests {
+     }
+ 
+     fn heuristic_one(_graph: &SimpleGraph) -> Option<Chromosome> {
+-        let genes = vec![2, 0, 1, 2, 0];
++        let genes = vec![2, 0, 1, 2, 1];
+         Some(Chromosome::new(genes))
+     }
+ 
+@@ -193,7 +194,7 @@ mod tests {
+         let graph = create_test_graph();
+         let heuristics: Vec<fn(&SimpleGraph) -> Option<Chromosome>> =
+             vec![heuristic_one, heuristic_two];
+-        let population_size = 2; // Less than minimum required (heuristics.len() + 1)
++        let population_size = 2;
+ 
+         let result = Population::new(&graph, heuristics, population_size);
+         assert!(matches!(
+@@ -206,7 +207,7 @@ mod tests {
+     fn test_population_creation_with_isolated_vertices() {
+         let mut graph = SimpleGraph::new();
+         graph.add_vertex(0).unwrap();
+-        graph.add_vertex(1).unwrap(); // Isolated vertices
++        graph.add_vertex(1).unwrap();
+ 
+         let heuristics: Vec<fn(&SimpleGraph) -> Option<Chromosome>> = vec![heuristic_one];
+         let population_size = 3;
+@@ -237,17 +238,11 @@ mod tests {
+         let population = Population::new(&graph, heuristics, population_size).unwrap();
+ 
+         for (index, individual) in population.individuals().iter().enumerate() {
+-            let corrected_individual = if individual.is_valid_to_total_roman_domination(&graph) {
+-                individual.clone()
+-            } else {
+-                individual.fix_chromosome(&graph)
+-            };
+-
+             assert!(
+-                corrected_individual.is_valid_to_total_roman_domination(&graph),
++                individual.is_valid_to_total_roman_domination(&graph),
+                 "Individual {} é inválido após fix_chromosome: {:?}",
+                 index,
+-                corrected_individual.genes()
++                individual.genes()
+             );
+         }
+     }
+@@ -256,21 +251,21 @@ mod tests {
+     fn test_best_individual_selection() {
+         let graph = create_test_graph();
+         let heuristics: Vec<fn(&SimpleGraph) -> Option<Chromosome>> = vec![
+-            |_| Some(Chromosome::new(vec![2, 2, 2, 2, 2])), // fitness = 10
+-            |_| Some(Chromosome::new(vec![1, 1, 1, 1, 1])), // fitness = 5
+-            |_| Some(Chromosome::new(vec![2, 0, 2, 0, 2])), // fitness = 6
++            |_| Some(Chromosome::new(vec![2, 2, 2, 2, 2])),
++            |_| Some(Chromosome::new(vec![1, 1, 1, 1, 1])),
++            |_| Some(Chromosome::new(vec![2, 0, 2, 0, 2])),
+         ];
+         let population_size = 4;
+ 
+-        let mut population = Population::new(&graph, heuristics, population_size).unwrap();
+-        let mut best = population.best_individual().unwrap();
++        let population = Population::new(&graph, heuristics, population_size).unwrap();
++        let best = population.best_individual().unwrap();
+ 
+         assert_eq!(best.fitness(), 5);
+     }
+ 
+     #[test]
+     fn test_empty_population_best_individual() {
+-        let mut population = Population {
++        let population = Population {
+             individuals: vec![],
+             size: 0,
+         };
+@@ -281,7 +276,7 @@ mod tests {
+     fn test_population_with_minimum_size() {
+         let graph = create_small_test_graph();
+         let heuristics: Vec<fn(&SimpleGraph) -> Option<Chromosome>> = vec![heuristic_one];
+-        let population_size = 2; // Minimum size (1 heuristic + 1)
++        let population_size = 2;
+ 
+         let population = Population::new(&graph, heuristics, population_size).unwrap();
+         assert_eq!(population.size(), 2);
+@@ -312,7 +307,7 @@ mod tests {
+         assert_eq!(chromosome.genes().len(), graph.vertex_count());
+         assert!(chromosome.is_valid_to_total_roman_domination(&graph));
+ 
+-        for gene in chromosome.genes() {
++        for &gene in chromosome.genes() {
+             assert!(gene <= 2);
+         }
+     }
+diff --git a/src/genetic/selection.rs b/src/genetic/selection.rs
+index 34aacc9..287e93a 100644
+--- a/src/genetic/selection.rs
++++ b/src/genetic/selection.rs
+@@ -14,20 +14,20 @@ impl SelectionStrategy for KTournamentSelection {
+     fn select(&self, population: &Population) -> Population {
+         let mut rng = rand::thread_rng();
+         let mut new_individuals = Vec::with_capacity(population.size());
+-        let mut individuals = population.individuals();
++        let individuals = population.individuals();
+ 
+         for _ in 0..population.size() {
++            // Seleciona índices aleatórios para o torneio
+             let indices: Vec<usize> =
+                 (0..individuals.len()).choose_multiple(&mut rng, self.tournament_size);
+ 
++            // Determina o melhor indivíduo no torneio
+             let best_index = indices
+                 .iter()
+-                .max_by_key(|&&i| {
+-                    let individual = &mut individuals[i];
+-                    individual.fitness()
+-                })
++                .max_by_key(|&&i| individuals[i].fitness())
+                 .unwrap();
+ 
++            // Clona o melhor indivíduo para a nova população
+             new_individuals.push(individuals[*best_index].clone());
+         }
+ 

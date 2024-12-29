@@ -4,7 +4,7 @@ use crate::graph::SimpleGraph;
 
 use super::Chromosome;
 
-#[derive(Debug, Default)]
+#[derive(Debug, Clone, Default)]
 pub struct Population {
     individuals: Vec<Chromosome>,
     size: usize,
@@ -62,27 +62,27 @@ impl Population {
         let max_attempts = 100; // Limite de tentativas
 
         for _ in 0..max_attempts {
-            // Gera genes aleatórios
             let genes: Vec<u8> = (0..vertex_count).map(|_| rng.gen_range(0..=2)).collect();
-            let chromosome = Chromosome::new(genes);
-
-            let chromosome = chromosome.fix_chromosome(graph);
+            let chromosome = Chromosome::new(genes).fix_chromosome(graph);
 
             if chromosome.is_valid_to_total_roman_domination(graph) {
                 return chromosome;
             }
         }
 
+        // Fallback: tenta gerar um cromossomo válido com todos os vértices dominados
         let fallback_genes = vec![2; vertex_count];
-        Chromosome::new(fallback_genes)
+        let fallback_chromosome = Chromosome::new(fallback_genes);
+
+        fallback_chromosome.fix_chromosome(graph)
     }
 
     pub fn size(&self) -> usize {
         self.size
     }
 
-    pub fn individuals(&self) -> Vec<Chromosome> {
-        self.individuals.clone()
+    pub fn individuals(&self) -> &[Chromosome] {
+        &self.individuals
     }
 
     pub fn add_individual(&mut self, individual: Chromosome) {
@@ -90,22 +90,17 @@ impl Population {
         self.size = self.individuals.len();
     }
 
-    pub fn best_individual(&mut self) -> Result<Chromosome, PopulationError> {
+    pub fn best_individual(&self) -> Result<Chromosome, PopulationError> {
         if self.individuals.is_empty() {
             return Err(PopulationError::PopulationEmpyt);
         }
-
-        let mut best_index = 0;
-        let mut best_fitness = self.individuals[0].fitness();
-
-        // Procura o indivíduo com menor fitness
-        for (index, individual) in self.individuals.iter_mut().enumerate().skip(1) {
-            let current_fitness = individual.fitness();
-            if current_fitness < best_fitness {
-                best_fitness = current_fitness;
-                best_index = index;
-            }
-        }
+        let (best_index, _best_fitness) = self
+            .individuals
+            .iter()
+            .enumerate()
+            .map(|(index, individual)| (index, individual.fitness()))
+            .min_by_key(|&(_, fitness)| fitness)
+            .unwrap();
 
         Ok(self.individuals[best_index].clone())
     }
@@ -160,7 +155,7 @@ mod tests {
     }
 
     fn heuristic_one(_graph: &SimpleGraph) -> Option<Chromosome> {
-        let genes = vec![2, 0, 1, 2, 0];
+        let genes = vec![2, 0, 1, 2, 1];
         Some(Chromosome::new(genes))
     }
 
@@ -193,7 +188,7 @@ mod tests {
         let graph = create_test_graph();
         let heuristics: Vec<fn(&SimpleGraph) -> Option<Chromosome>> =
             vec![heuristic_one, heuristic_two];
-        let population_size = 2; // Less than minimum required (heuristics.len() + 1)
+        let population_size = 2;
 
         let result = Population::new(&graph, heuristics, population_size);
         assert!(matches!(
@@ -206,7 +201,7 @@ mod tests {
     fn test_population_creation_with_isolated_vertices() {
         let mut graph = SimpleGraph::new();
         graph.add_vertex(0).unwrap();
-        graph.add_vertex(1).unwrap(); // Isolated vertices
+        graph.add_vertex(1).unwrap();
 
         let heuristics: Vec<fn(&SimpleGraph) -> Option<Chromosome>> = vec![heuristic_one];
         let population_size = 3;
@@ -237,17 +232,11 @@ mod tests {
         let population = Population::new(&graph, heuristics, population_size).unwrap();
 
         for (index, individual) in population.individuals().iter().enumerate() {
-            let corrected_individual = if individual.is_valid_to_total_roman_domination(&graph) {
-                individual.clone()
-            } else {
-                individual.fix_chromosome(&graph)
-            };
-
             assert!(
-                corrected_individual.is_valid_to_total_roman_domination(&graph),
+                individual.is_valid_to_total_roman_domination(&graph),
                 "Individual {} é inválido após fix_chromosome: {:?}",
                 index,
-                corrected_individual.genes()
+                individual.genes()
             );
         }
     }
@@ -256,21 +245,21 @@ mod tests {
     fn test_best_individual_selection() {
         let graph = create_test_graph();
         let heuristics: Vec<fn(&SimpleGraph) -> Option<Chromosome>> = vec![
-            |_| Some(Chromosome::new(vec![2, 2, 2, 2, 2])), // fitness = 10
-            |_| Some(Chromosome::new(vec![1, 1, 1, 1, 1])), // fitness = 5
-            |_| Some(Chromosome::new(vec![2, 0, 2, 0, 2])), // fitness = 6
+            |_| Some(Chromosome::new(vec![2, 2, 2, 2, 2])),
+            |_| Some(Chromosome::new(vec![1, 1, 1, 1, 1])),
+            |_| Some(Chromosome::new(vec![2, 0, 2, 0, 2])),
         ];
         let population_size = 4;
 
-        let mut population = Population::new(&graph, heuristics, population_size).unwrap();
-        let mut best = population.best_individual().unwrap();
+        let population = Population::new(&graph, heuristics, population_size).unwrap();
+        let best = population.best_individual().unwrap();
 
         assert_eq!(best.fitness(), 5);
     }
 
     #[test]
     fn test_empty_population_best_individual() {
-        let mut population = Population {
+        let population = Population {
             individuals: vec![],
             size: 0,
         };
@@ -281,7 +270,7 @@ mod tests {
     fn test_population_with_minimum_size() {
         let graph = create_small_test_graph();
         let heuristics: Vec<fn(&SimpleGraph) -> Option<Chromosome>> = vec![heuristic_one];
-        let population_size = 2; // Minimum size (1 heuristic + 1)
+        let population_size = 2;
 
         let population = Population::new(&graph, heuristics, population_size).unwrap();
         assert_eq!(population.size(), 2);
@@ -312,7 +301,7 @@ mod tests {
         assert_eq!(chromosome.genes().len(), graph.vertex_count());
         assert!(chromosome.is_valid_to_total_roman_domination(&graph));
 
-        for gene in chromosome.genes() {
+        for &gene in chromosome.genes() {
             assert!(gene <= 2);
         }
     }

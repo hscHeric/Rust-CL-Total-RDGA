@@ -14,20 +14,20 @@ impl SelectionStrategy for KTournamentSelection {
     fn select(&self, population: &Population) -> Population {
         let mut rng = rand::thread_rng();
         let mut new_individuals = Vec::with_capacity(population.size());
-        let mut individuals = population.individuals();
+        let individuals = population.individuals();
 
         for _ in 0..population.size() {
+            // Seleciona índices aleatórios para o torneio
             let indices: Vec<usize> =
                 (0..individuals.len()).choose_multiple(&mut rng, self.tournament_size);
 
+            // Determina o melhor indivíduo no torneio
             let best_index = indices
                 .iter()
-                .max_by_key(|&&i| {
-                    let individual = &mut individuals[i];
-                    individual.fitness()
-                })
+                .max_by_key(|&&i| individuals[i].fitness())
                 .unwrap();
 
+            // Clona o melhor indivíduo para a nova população
             new_individuals.push(individuals[*best_index].clone());
         }
 
