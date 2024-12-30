@@ -12,7 +12,7 @@ pub enum GraphError {
 /// Simple Graph
 #[derive(Debug, Clone)]
 pub struct SimpleGraph {
-    adjacency_list: HashMap<usize, HashSet<usize>>,
+    pub adjacency_list: HashMap<usize, HashSet<usize>>,
 }
 
 impl SimpleGraph {
