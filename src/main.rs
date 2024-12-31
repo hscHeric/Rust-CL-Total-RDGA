@@ -13,7 +13,6 @@ fn main() {
     let vertex_count = rng.gen_range(0..10);
     let edge_probability = rng.gen();
 
-    // Gerando o grafo
     let graph_generator = SimpleGraphGenerator::new(vertex_count, edge_probability);
     let edges = match graph_generator.generate() {
         Ok(edges) => edges,
@@ -30,18 +29,6 @@ fn main() {
             return;
         }
     };
-
-    let mut graph = SimpleGraph::new();
-    graph.add_vertex(0).unwrap();
-    graph.add_vertex(1).unwrap();
-    graph.add_vertex(2).unwrap();
-    graph.add_vertex(3).unwrap();
-    graph.add_vertex(4).unwrap();
-    graph.add_edge(0, 1).unwrap();
-    graph.add_edge(1, 2).unwrap();
-    graph.add_edge(2, 3).unwrap();
-    graph.add_edge(3, 4).unwrap();
-    graph.add_edge(4, 0).unwrap();
 
     println!(
         "Grafo gerado com {} vértices e {} arestas.",
