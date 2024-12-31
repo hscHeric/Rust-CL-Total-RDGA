@@ -127,6 +127,6 @@ pub fn h1(graph: &SimpleGraph) -> Option<Chromosome> {
     if chromosome.is_valid_to_total_roman_domination(graph) {
         Some(chromosome)
     } else {
-        None
+        Some(chromosome.fix_chromosome(graph))
     }
 }
