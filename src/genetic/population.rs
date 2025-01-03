@@ -1,5 +1,3 @@
-use rand::Rng;
-
 use crate::graph::SimpleGraph;
 
 use super::Chromosome;
