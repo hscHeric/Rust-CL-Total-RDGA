@@ -1,4 +1,5 @@
 use std::{
+    collections::HashMap,
     fs::File,
     io::{self, BufRead},
 };
@@ -22,4 +23,34 @@ pub fn from_edge_list_file(file_path: &str) -> Vec<(usize, usize)> {
     }
 
     edges
+}
+
+pub fn normalize_edges(edges: Vec<(usize, usize)>) -> Vec<(usize, usize)> {
+    let mut vertex_map = HashMap::new();
+    let mut next_index = 0;
+
+    let mut normalized_edges = Vec::new();
+
+    for (u, v) in edges {
+        if u == v {
+            // Ignora self-loops
+            continue;
+        }
+
+        let normalized_u = *vertex_map.entry(u).or_insert_with(|| {
+            let current = next_index;
+            next_index += 1;
+            current
+        });
+
+        let normalized_v = *vertex_map.entry(v).or_insert_with(|| {
+            let current = next_index;
+            next_index += 1;
+            current
+        });
+
+        normalized_edges.push((normalized_u, normalized_v));
+    }
+
+    normalized_edges
 }
