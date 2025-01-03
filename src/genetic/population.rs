@@ -22,7 +22,7 @@ pub enum PopulationError {
 impl Population {
     pub fn new<F>(
         graph: &SimpleGraph,
-        heuristics: Vec<F>,
+        mut heuristics: Vec<F>,
         size: usize,
     ) -> Result<Self, PopulationError>
     where
@@ -32,10 +32,16 @@ impl Population {
             return Err(PopulationError::IsolatedVerticesFound);
         }
 
-        let min_size = heuristics.len() + 1;
+        if heuristics.is_empty() {
+            return Err(PopulationError::NotEnoughHeuristics);
+        }
+
+        let min_size = heuristics.len();
         if size < min_size {
             return Err(PopulationError::InvalidPopulationSize);
         }
+
+        let last_heuristic = heuristics.pop().unwrap();
 
         let mut individuals: Vec<Chromosome> = Vec::with_capacity(size);
 
@@ -47,8 +53,10 @@ impl Population {
         }
 
         while individuals.len() < size {
-            let chromosome = Self::generate_random_valid_chromosome(graph);
-            individuals.push(chromosome);
+            match last_heuristic(graph) {
+                Some(chromosome) => individuals.push(chromosome),
+                None => return Err(PopulationError::HeuristicFailed),
+            }
         }
 
         let size = individuals.len();
@@ -56,26 +64,26 @@ impl Population {
         Ok(Self { individuals, size })
     }
 
-    pub fn generate_random_valid_chromosome(graph: &SimpleGraph) -> Chromosome {
-        let mut rng = rand::thread_rng();
-        let vertex_count = graph.vertex_count();
-        let max_attempts = 100; // Limite de tentativas
-
-        for _ in 0..max_attempts {
-            let genes: Vec<u8> = (0..vertex_count).map(|_| rng.gen_range(0..=2)).collect();
-            let chromosome = Chromosome::new(genes).fix_chromosome(graph);
-
-            if chromosome.is_valid_to_total_roman_domination(graph) {
-                return chromosome;
-            }
-        }
-
-        // Fallback: tenta gerar um cromossomo válido com todos os vértices dominados
-        let fallback_genes = vec![2; vertex_count];
-        let fallback_chromosome = Chromosome::new(fallback_genes);
-
-        fallback_chromosome.fix_chromosome(graph)
-    }
+    // pub fn generate_random_valid_chromosome(graph: &SimpleGraph) -> Chromosome {
+    //     let mut rng = rand::thread_rng();
+    //     let vertex_count = graph.vertex_count();
+    //     let max_attempts = 100; // Limite de tentativas
+    //
+    //     for _ in 0..max_attempts {
+    //         let genes: Vec<u8> = (0..vertex_count).map(|_| rng.gen_range(0..=2)).collect();
+    //         let chromosome = Chromosome::new(genes).fix_chromosome(graph);
+    //
+    //         if chromosome.is_valid_to_total_roman_domination(graph) {
+    //             return chromosome;
+    //         }
+    //     }
+    //
+    //     // Fallback: tenta gerar um cromossomo válido com todos os vértices dominados
+    //     let fallback_genes = vec![2; vertex_count];
+    //     let fallback_chromosome = Chromosome::new(fallback_genes);
+    //
+    //     fallback_chromosome.fix_chromosome(graph)
+    // }
 
     pub fn size(&self) -> usize {
         self.size
@@ -188,7 +196,7 @@ mod tests {
         let graph = create_test_graph();
         let heuristics: Vec<fn(&SimpleGraph) -> Option<Chromosome>> =
             vec![heuristic_one, heuristic_two];
-        let population_size = 2;
+        let population_size = 1;
 
         let result = Population::new(&graph, heuristics, population_size);
         assert!(matches!(
@@ -290,19 +298,6 @@ mod tests {
         assert_eq!(individuals1.len(), individuals2.len());
         for (ind1, ind2) in individuals1.iter().zip(individuals2.iter()) {
             assert_eq!(ind1.genes(), ind2.genes());
-        }
-    }
-
-    #[test]
-    fn test_generate_random_valid_chromosome() {
-        let graph = create_test_graph();
-        let chromosome = Population::generate_random_valid_chromosome(&graph);
-
-        assert_eq!(chromosome.genes().len(), graph.vertex_count());
-        assert!(chromosome.is_valid_to_total_roman_domination(&graph));
-
-        for &gene in chromosome.genes() {
-            assert!(gene <= 2);
         }
     }
 }
