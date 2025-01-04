@@ -9,6 +9,7 @@ use cl_total_rdga::{
     },
     graph::{parser::from_edge_list_file, SimpleGraph},
 };
+use rayon::iter::{IntoParallelIterator, ParallelIterator};
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -56,43 +57,25 @@ fn main() {
     let crossover_strategy = TwoPointCrossover { crossover_rate };
 
     println!("graph_name,graph_order,graph_size,fitness_value,elapsed_time(microsecond)");
-    for trial in 0..trials {
+    (0..trials).into_par_iter().for_each(|trial| {
         let start_time = Instant::now();
-        let mut population = match Population::new(&graph, heuristics.clone(), pop_size) {
-            Ok(population) => population,
-            Err(err) => {
-                eprintln!("Erro ao criar a população inicial: {:?}", err);
-                return;
-            }
-        };
+        let mut population = Population::new(&graph, heuristics.clone(), pop_size)
+            .expect("Erro ao criar a população inicial");
 
-        let mut best_solution = match population.best_individual() {
-            Ok(individual) => individual,
-            Err(err) => {
-                eprintln!(
-                    "Erro ao obter o melhor indivíduo inicial no trial {}: {:?}",
-                    trial, err
-                );
-                continue;
-            }
-        };
+        let mut best_solution = population
+            .best_individual()
+            .expect("Erro ao obter o melhor indivíduo inicial");
 
         let mut stagnant_generations = 0;
         for generation in 0..generations {
+            println!("Trial: {} | Generation: {}", trial, generation);
             let selected_population = selection_strategy.select(&population);
             let offspring_population = crossover_strategy.crossover(&selected_population, &graph);
             population = offspring_population.validate_population(&graph);
 
-            let new_best_solution = match population.best_individual() {
-                Ok(individual) => individual,
-                Err(err) => {
-                    eprintln!(
-                        "Erro ao obter o melhor indivíduo na geração {} do trial {}: {:?}",
-                        generation, trial, err
-                    );
-                    break;
-                }
-            };
+            let new_best_solution = population
+                .best_individual()
+                .expect("Erro ao obter o melhor indivíduo");
 
             if new_best_solution.fitness() < best_solution.fitness() {
                 best_solution = new_best_solution;
@@ -105,6 +88,7 @@ fn main() {
                 break;
             }
         }
+
         let elapsed_time = start_time.elapsed();
         let graph_name = file_path.split('/').last().unwrap_or("unknown");
 
@@ -116,5 +100,5 @@ fn main() {
             best_solution.fitness(),
             elapsed_time.as_micros()
         );
-    }
+    });
 }
