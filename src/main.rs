@@ -1,4 +1,5 @@
 use std::process::exit;
+use std::sync::Mutex;
 use std::{env, time::Instant};
 
 use cl_total_rdga::graph::parser::normalize_edges;
@@ -63,8 +64,8 @@ fn main() {
     let selection_strategy = KTournamentSelection { tournament_size };
     let crossover_strategy = TwoPointCrossover { crossover_rate };
 
-    println!("graph_name,graph_order,graph_size,fitness_value,elapsed_time(microsecond)");
-    (0..trials).into_par_iter().for_each(|trial| {
+    let results = Mutex::new(Vec::new());
+    (0..trials).into_par_iter().for_each(|_| {
         let start_time = Instant::now();
         let mut population = Population::new(&graph, heuristics.clone(), pop_size)
             .expect("Erro ao criar a população inicial");
@@ -74,7 +75,7 @@ fn main() {
             .expect("Erro ao obter o melhor indivíduo inicial");
 
         let mut stagnant_generations = 0;
-        for generation in 0..generations {
+        for _ in 0..generations {
             let selected_population = selection_strategy.select(&population);
             let offspring_population = crossover_strategy.crossover(&selected_population, &graph);
             population = offspring_population.validate_population(&graph);
@@ -98,7 +99,7 @@ fn main() {
         let elapsed_time = start_time.elapsed();
         let graph_name = file_path.split('/').last().unwrap_or("unknown");
 
-        println!(
+        let result = format!(
             "{},{},{},{},{}",
             graph_name,
             graph.vertex_count(),
@@ -106,5 +107,12 @@ fn main() {
             best_solution.fitness(),
             elapsed_time.as_micros()
         );
+        results.lock().unwrap().push(result);
     });
+
+    println!("graph_name,graph_order,graph_size,fitness_value,elapsed_time(microsecond)");
+    let results = results.into_inner().unwrap();
+    for result in results {
+        println!("{}", result);
+    }
 }
