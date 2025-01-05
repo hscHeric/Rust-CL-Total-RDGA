@@ -248,3 +248,73 @@ pub fn h0(graph: &SimpleGraph) -> Option<Chromosome> {
         Some(chromosome.fix_chromosome(graph))
     }
 }
+
+pub fn h2(graph: &SimpleGraph) -> Option<Chromosome> {
+    let vertex_count = graph.vertex_count();
+    if vertex_count == 0 {
+        return None; // Grafo vazio, não há como gerar cromossomo
+    }
+
+    let mut genes = vec![3; vertex_count];
+    let mut vertex_degrees: Vec<(usize, usize)> = graph
+        .adjacency_list
+        .iter()
+        .map(|(&vertex, neighbors)| (vertex, neighbors.len()))
+        .collect();
+
+    vertex_degrees.sort_by_key(|&(_, degree)| std::cmp::Reverse(degree));
+
+    let mut modified = true;
+    while modified {
+        modified = false; // Assume que nenhuma modificação será feita
+
+        for (vertex, degree) in &vertex_degrees {
+            if genes[*vertex] == 3 {
+                // Caso f[v] == 3
+                if *degree == 1 {
+                    genes[*vertex] = 1; // Define f[v] = 1
+                    if let Ok(neighbors) = graph.neighbors(*vertex) {
+                        for &neighbor in neighbors {
+                            if genes[neighbor] == 3 {
+                                genes[neighbor] = 1; // Define f[u] = 1 para o vizinho
+                                modified = true; // Modificação realizada
+                            }
+                        }
+                    }
+                } else if *degree >= 2 {
+                    genes[*vertex] = 2; // Define f[v] = 2
+                    if let Ok(neighbors) = graph.neighbors(*vertex) {
+                        let mut unprocessed_neighbors: Vec<_> = neighbors
+                            .iter()
+                            .filter(|&&neighbor| genes[neighbor] == 3)
+                            .copied()
+                            .collect();
+
+                        // Seleciona o vizinho de maior grau
+                        if let Some(&selected_neighbor) = unprocessed_neighbors
+                            .iter()
+                            .max_by_key(|&&neighbor| graph.adjacency_list[&neighbor].len())
+                        {
+                            genes[selected_neighbor] = 1; // Define vizinho com maior grau como 1
+                            unprocessed_neighbors.retain(|&n| n != selected_neighbor);
+                            modified = true; // Modificação realizada
+                        }
+
+                        for neighbor in unprocessed_neighbors {
+                            genes[neighbor] = 0; // Define todos os outros vizinhos como 0
+                            modified = true; // Modificação realizada
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Valida o cromossomo gerado
+    let chromosome = Chromosome::new(genes);
+    if chromosome.is_valid_to_total_roman_domination(graph) {
+        Some(chromosome)
+    } else {
+        Some(chromosome.fix_chromosome(graph))
+    }
+}

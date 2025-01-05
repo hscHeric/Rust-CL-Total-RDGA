@@ -2,6 +2,7 @@ use std::process::exit;
 use std::sync::Mutex;
 use std::{env, time::Instant};
 
+use cl_total_rdga::genetic::heuristics::h2;
 use cl_total_rdga::graph::parser::normalize_edges;
 use cl_total_rdga::{
     genetic::{
@@ -60,7 +61,7 @@ fn main() {
         .and_then(|s| s.parse().ok())
         .unwrap_or_else(|| ((graph.vertex_count() as f64 / 1.5).ceil() as usize).max(1));
 
-    let heuristics: Vec<fn(&SimpleGraph) -> Option<Chromosome>> = vec![h1, h0];
+    let heuristics: Vec<fn(&SimpleGraph) -> Option<Chromosome>> = vec![h1, h2, h0];
     let selection_strategy = KTournamentSelection { tournament_size };
     let crossover_strategy = TwoPointCrossover { crossover_rate };
 
