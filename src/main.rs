@@ -10,8 +10,15 @@ use cl_total_rdga::{
     graph::{parser::from_edge_list_file, SimpleGraph},
 };
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
+use rayon::ThreadPoolBuilder;
 
 fn main() {
+    let num_cpus = num_cpus::get();
+    ThreadPoolBuilder::new()
+        .num_threads(num_cpus)
+        .build_global()
+        .expect("Falha ao configurar o pool de threads do Rayon");
+
     let args: Vec<String> = env::args().collect();
     if args.len() < 3 {
         eprintln!(
