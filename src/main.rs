@@ -68,7 +68,6 @@ fn main() {
 
         let mut stagnant_generations = 0;
         for generation in 0..generations {
-            println!("Trial: {} | Generation: {}", trial, generation);
             let selected_population = selection_strategy.select(&population);
             let offspring_population = crossover_strategy.crossover(&selected_population, &graph);
             population = offspring_population.validate_population(&graph);
