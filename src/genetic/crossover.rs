@@ -14,31 +14,29 @@ pub struct TwoPointCrossover {
 impl CrossoverStrategy for TwoPointCrossover {
     fn crossover(&self, population: &Population, graph: &UndirectedGraph<usize>) -> Population {
         if self.crossover_rate == 0.0 {
-            return population.clone();
+            return population.clone(); // Consider returning population directly
         }
 
         let mut rng = rand::thread_rng();
         let mut new_individuals = Vec::with_capacity(population.size());
-        let shuffled_individuals = population.individuals();
-
-        let mut shuffled_individuals = shuffled_individuals.to_vec();
+        let mut shuffled_individuals = population.individuals().to_vec();
         shuffled_individuals.shuffle(&mut rng);
 
-        for pair in shuffled_individuals.chunks(2) {
-            if pair.len() == 2 {
-                let (parent_a, parent_b) = (&pair[0], &pair[1]);
+        for pair in shuffled_individuals.chunks_exact(2) {
+            let (parent_a, parent_b) = (&pair[0], &pair[1]);
 
-                if rng.gen_bool(self.crossover_rate) {
-                    let (child_a, child_b) = two_point_crossover(parent_a, parent_b);
-                    new_individuals.push(child_a);
-                    new_individuals.push(child_b);
-                } else {
-                    new_individuals.push(parent_a.clone());
-                    new_individuals.push(parent_b.clone());
-                }
+            if rng.gen_bool(self.crossover_rate) {
+                let (child_a, child_b) = two_point_crossover(parent_a, parent_b);
+                new_individuals.push(child_a);
+                new_individuals.push(child_b);
             } else {
-                new_individuals.push(pair[0].clone());
+                new_individuals.push(parent_a.clone());
+                new_individuals.push(parent_b.clone());
             }
+        }
+
+        if !shuffled_individuals.is_empty() {
+            new_individuals.push(shuffled_individuals.last().unwrap().clone());
         }
 
         Population::new_from_individuals(new_individuals).validate_population(graph)
@@ -69,6 +67,60 @@ fn two_point_crossover(parent_a: &Chromosome, parent_b: &Chromosome) -> (Chromos
         .collect();
 
     (Chromosome::new(childa_genes), Chromosome::new(childb_genes))
+}
+
+pub struct OnePointCrossover {
+    crossover_rate: f64,
+}
+
+fn one_point_crossover(parent_a: &Chromosome, parent_b: &Chromosome) -> (Chromosome, Chromosome) {
+    let mut rng = rand::thread_rng();
+    let len = parent_a.genes().len();
+
+    let cut_point = rng.gen_range(0..len);
+
+    let mut offspring_a_genes = parent_a.genes()[..cut_point].to_vec();
+    offspring_a_genes.extend_from_slice(&parent_b.genes()[cut_point..]);
+
+    let mut offspring_b_genes = parent_b.genes()[..cut_point].to_vec();
+    offspring_b_genes.extend_from_slice(&parent_a.genes()[cut_point..]);
+
+    (
+        Chromosome::new(offspring_a_genes),
+        Chromosome::new(offspring_b_genes),
+    )
+}
+
+impl CrossoverStrategy for OnePointCrossover {
+    fn crossover(&self, population: &Population, graph: &UndirectedGraph<usize>) -> Population {
+        if self.crossover_rate == 0.0 {
+            return population.clone(); // Consider returning population directly
+        }
+
+        let mut rng = rand::thread_rng();
+        let mut new_individuals = Vec::with_capacity(population.size());
+        let mut shuffled_individuals = population.individuals().to_vec();
+        shuffled_individuals.shuffle(&mut rng);
+
+        for pair in shuffled_individuals.chunks_exact(2) {
+            let (parent_a, parent_b) = (&pair[0], &pair[1]);
+
+            if rng.gen_bool(self.crossover_rate) {
+                let (child_a, child_b) = one_point_crossover(parent_a, parent_b);
+                new_individuals.push(child_a);
+                new_individuals.push(child_b);
+            } else {
+                new_individuals.push(parent_a.clone());
+                new_individuals.push(parent_b.clone());
+            }
+        }
+
+        if !shuffled_individuals.is_empty() {
+            new_individuals.push(shuffled_individuals.last().unwrap().clone());
+        }
+
+        Population::new_from_individuals(new_individuals).validate_population(graph)
+    }
 }
 
 #[cfg(test)]
