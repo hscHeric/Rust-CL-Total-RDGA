@@ -107,8 +107,8 @@ Os testes cobrem casos como:
 
 Para dúvidas ou sugestões, entre em contato com:
 
-*   E-mail: [seu\_email@example.com](mailto:hericsilvaho@gmail.com)
-*   GitHub: [https://github.com/seu\_usuario](https://github.com/hscHeric)
+*   E-mail: [hericsilvaho@gmail.com](mailto:hericsilvaho@gmail.com)
+*   GitHub: [https://github.com/hscHeric](https://github.com/hscHeric)
 
 * * *
 
