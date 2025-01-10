@@ -2,15 +2,41 @@ use rand::seq::IteratorRandom;
 
 use super::Population;
 
+/// Estratégia de seleção de indivíduos em uma população.
+///
+/// As estratégias de seleção são usadas para selecionar indivíduos de uma população
+/// para a próxima geração, com base em algum critério como aptidão (fitness).
 pub trait SelectionStrategy {
+    /// Seleciona indivíduos de uma população para formar uma nova população.
+    ///
+    /// # Parâmetros
+    /// - `population`: A população atual da qual os indivíduos serão selecionados.
+    ///
+    /// # Retorno
+    /// Retorna uma nova `Population` contendo os indivíduos selecionados.
     fn select(&self, population: &Population) -> Population;
 }
 
+/// Estratégia de seleção baseada em torneios.
+///
+/// Seleciona indivíduos por meio de torneios, onde grupos aleatórios de indivíduos
+/// são comparados e o melhor indivíduo de cada grupo é selecionado.
 pub struct KTournamentSelection {
+    /// O tamanho do torneio (número de indivíduos em cada grupo de torneio).
     pub tournament_size: usize,
 }
 
 impl SelectionStrategy for KTournamentSelection {
+    /// Executa a seleção de torneios para criar uma nova população.
+    ///
+    /// # Parâmetros
+    /// - `population`: A população atual da qual os indivíduos serão selecionados.
+    ///
+    /// # Retorno
+    /// Retorna uma nova `Population` contendo os vencedores dos torneios.
+    ///
+    /// # Panics
+    /// Esse método fará panic se a população estiver vazia.
     fn select(&self, population: &Population) -> Population {
         let mut rng = rand::thread_rng();
         let mut new_individuals = Vec::with_capacity(population.size());

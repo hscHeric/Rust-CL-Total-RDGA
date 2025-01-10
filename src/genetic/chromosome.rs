@@ -1,6 +1,9 @@
 use kambo_graph::{graphs::simple::UndirectedGraph, Graph};
 use rand::seq::SliceRandom;
 
+/// Representa uma possivel solução em um algoritmo genético.
+///
+/// Cada cromossomo contém uma sequência de genes e um valor de fitness associado.
 #[derive(Debug, Clone)]
 pub struct Chromosome {
     genes: Vec<u8>,
@@ -8,19 +11,41 @@ pub struct Chromosome {
 }
 
 impl Chromosome {
+    /// Cria um novo cromossomo com base em uma sequência de genes.
+    ///
+    /// # Parâmetros
+    /// - `genes`: Um vetor de valores representando os genes do cromossomo.
+    ///
+    /// # Retorno
+    /// Retorna uma nova instância de `Chromosome`.
     pub fn new(genes: Vec<u8>) -> Self {
         let fitness = genes.iter().copied().map(usize::from).sum();
         Self { genes, fitness }
     }
 
+    /// Retorna o valor do fitness do cromossomo.
+    ///
+    /// # Retorno
+    /// O valor do fitness como um número inteiro.
     pub fn fitness(&self) -> usize {
         self.fitness
     }
 
+    /// Retorna uma fatia imutável contendo os genes do cromossomo.
+    ///
+    /// # Retorno
+    /// Uma referência imutável ao vetor de genes.
     pub fn genes(&self) -> &[u8] {
         &self.genes
     }
 
+    /// Verifica se o cromossomo é válido para a dominação romana total.
+    ///
+    /// # Parâmetros
+    /// - `graph`: O grafo no qual o cromossomo será validado.
+    ///
+    /// # Retorno
+    /// Retorna `true` se o cromossomo for válido, caso contrário `false`.
     pub fn is_valid_to_total_roman_domination(&self, graph: &UndirectedGraph<usize>) -> bool {
         let genes = &self.genes;
 
@@ -50,6 +75,13 @@ impl Chromosome {
         true
     }
 
+    /// Corrige os genes do cromossomo para torná-lo válido para a dominação romana total.
+    ///
+    /// # Parâmetros
+    /// - `graph`: O grafo usado para validar e corrigir os genes do cromossomo.
+    ///
+    /// # Retorno
+    /// Retorna um novo `Chromosome` com os genes corrigidos.
     pub fn fix_chromosome(&self, graph: &UndirectedGraph<usize>) -> Chromosome {
         let mut rng = rand::thread_rng();
         let mut new_genes = self.genes.clone();

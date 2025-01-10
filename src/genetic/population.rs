@@ -3,22 +3,47 @@ use kambo_graph::Graph;
 
 use super::Chromosome;
 
+/// Representa uma população de cromossomos em um algoritmo genético.
 #[derive(Debug, Clone, Default)]
 pub struct Population {
     individuals: Vec<Chromosome>,
     size: usize,
 }
 
+/// Define os possíveis erros que podem ocorrer ao manipular uma população.
 #[derive(Debug)]
 pub enum PopulationError {
+    /// Não há heurísticas suficientes para gerar cromossomos.
     NotEnoughHeuristics,
+    /// O tamanho da população é inválido (menor que o número de heurísticas).
     InvalidPopulationSize,
+    /// Uma heurística falhou ao gerar um cromossomo.
     HeuristicFailed,
+    /// A população está vazia.
     PopulationEmpyt,
+    /// O grafo contém vértices isolados, impossibilitando a criação de cromossomos válidos.
     IsolatedVerticesFound,
 }
 
 impl Population {
+    /// Cria uma nova população a partir de um grafo e de heurísticas.
+    ///
+    /// # Parâmetros
+    /// - `graph`: O grafo usado para validar os cromossomos gerados.
+    /// - `heuristics`: Um vetor de funções heurísticas para criar cromossomos
+    ///     (vai gerar uma
+    ///     solução para as heuristicas de 0..n-1, a heuristica n preenche a população com as que
+    ///     faltarem).
+    /// - `size`: O tamanho desejado da população.
+    ///
+    /// # Retorno
+    /// Retorna um `Result` com a população criada ou um erro (`PopulationError`) caso a criação falhe.
+    ///
+    /// # Erros
+    /// - `PopulationError::IsolatedVerticesFound`: Caso o grafo tenha vértices isolados.
+    /// - `PopulationError::NotEnoughHeuristics`: Se o vetor de heurísticas estiver vazio.
+    /// - `PopulationError::InvalidPopulationSize`: Se o tamanho solicitado for menor que o número de heurísticas.
+    /// - `PopulationError::HeuristicFailed`: Se alguma heurística falhar ao criar um cromossomo.
     pub fn new<F>(
         graph: &UndirectedGraph<usize>,
         mut heuristics: Vec<F>,
@@ -63,19 +88,32 @@ impl Population {
         Ok(Self { individuals, size })
     }
 
+    /// Retorna o tamanho da população.
     pub fn size(&self) -> usize {
         self.size
     }
 
+    /// Retorna uma referência imutável aos indivíduos da população.
     pub fn individuals(&self) -> &[Chromosome] {
         &self.individuals
     }
 
+    /// Adiciona um novo indivíduo à população.
+    ///
+    /// # Parâmetros
+    /// - `individual`: O cromossomo a ser adicionado à população.
     pub fn add_individual(&mut self, individual: Chromosome) {
         self.individuals.push(individual);
         self.size = self.individuals.len();
     }
 
+    /// Retorna o melhor indivíduo da população com base no fitness.
+    ///
+    /// # Retorno
+    /// Retorna um `Result` com o melhor cromossomo ou um erro se a população estiver vazia.
+    ///
+    /// # Erros
+    /// - `PopulationError::PopulationEmpyt`: Se a população estiver vazia.
     pub fn best_individual(&self) -> Result<Chromosome, PopulationError> {
         if self.individuals.is_empty() {
             return Err(PopulationError::PopulationEmpyt);
@@ -91,6 +129,13 @@ impl Population {
         Ok(self.individuals[best_index].clone())
     }
 
+    /// Valida a população ajustando os cromossomos inválidos para o dominação romana total.
+    ///
+    /// # Parâmetros
+    /// - `graph`: O grafo usado para validar os cromossomos.
+    ///
+    /// # Retorno
+    /// Retorna uma nova população com cromossomos corrigidos.
     pub fn validate_population(&self, graph: &UndirectedGraph<usize>) -> Population {
         let validated_individuals: Vec<Chromosome> = self
             .individuals
@@ -107,6 +152,13 @@ impl Population {
         Population::new_from_individuals(validated_individuals)
     }
 
+    /// Cria uma nova população a partir de um vetor de cromossomos existentes.
+    ///
+    /// # Parâmetros
+    /// - `individuals`: O vetor de cromossomos que formará a nova população.
+    ///
+    /// # Retorno
+    /// Retorna uma nova população com os cromossomos fornecidos.
     pub fn new_from_individuals(individuals: Vec<Chromosome>) -> Population {
         let size = individuals.len();
         Self { individuals, size }

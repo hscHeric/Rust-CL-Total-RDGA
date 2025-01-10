@@ -3,46 +3,73 @@ use rand::{seq::SliceRandom, Rng};
 
 use super::{Chromosome, Population};
 
+/// Representa uma estratégia de cruzamento genético.
+///
+/// O cruzamento genético combina cromossomos de uma população para gerar novos indivíduos
+/// com características herdadas dos pais.
 pub trait CrossoverStrategy {
+    /// Aplica a estratégia de cruzamento a uma população.
+    ///
+    /// # Parâmetros
+    /// - `population`: A população original.
+    /// - `graph`: O grafo usado para validar os indivíduos gerados.
+    ///
+    /// # Retorno
+    /// Retorna uma nova `Population` contendo os indivíduos resultantes do cruzamento.
     fn crossover(&self, population: &Population, graph: &UndirectedGraph<usize>) -> Population;
 }
 
+/// Estratégia de cruzamento de dois pontos.
+///
+/// Realiza cruzamentos entre dois pais selecionados, trocando segmentos de genes entre
+/// dois pontos aleatórios.
 pub struct TwoPointCrossover {
+    /// Taxa de cruzamento, um valor entre 0.0 e 1.0 que define a probabilidade de cruzamento.
     pub crossover_rate: f64,
 }
 
 impl CrossoverStrategy for TwoPointCrossover {
     fn crossover(&self, population: &Population, graph: &UndirectedGraph<usize>) -> Population {
         if self.crossover_rate == 0.0 {
-            return population.clone(); // Consider returning population directly
+            return population.clone();
         }
 
         let mut rng = rand::thread_rng();
         let mut new_individuals = Vec::with_capacity(population.size());
-        let mut shuffled_individuals = population.individuals().to_vec();
+        let shuffled_individuals = population.individuals();
+
+        let mut shuffled_individuals = shuffled_individuals.to_vec();
         shuffled_individuals.shuffle(&mut rng);
 
-        for pair in shuffled_individuals.chunks_exact(2) {
-            let (parent_a, parent_b) = (&pair[0], &pair[1]);
+        for pair in shuffled_individuals.chunks(2) {
+            if pair.len() == 2 {
+                let (parent_a, parent_b) = (&pair[0], &pair[1]);
 
-            if rng.gen_bool(self.crossover_rate) {
-                let (child_a, child_b) = two_point_crossover(parent_a, parent_b);
-                new_individuals.push(child_a);
-                new_individuals.push(child_b);
+                if rng.gen_bool(self.crossover_rate) {
+                    let (child_a, child_b) = two_point_crossover(parent_a, parent_b);
+                    new_individuals.push(child_a);
+                    new_individuals.push(child_b);
+                } else {
+                    new_individuals.push(parent_a.clone());
+                    new_individuals.push(parent_b.clone());
+                }
             } else {
-                new_individuals.push(parent_a.clone());
-                new_individuals.push(parent_b.clone());
+                new_individuals.push(pair[0].clone());
             }
-        }
-
-        if !shuffled_individuals.is_empty() {
-            new_individuals.push(shuffled_individuals.last().unwrap().clone());
         }
 
         Population::new_from_individuals(new_individuals).validate_population(graph)
     }
 }
 
+/// Realiza o cruzamento de dois pontos entre dois cromossomos.
+///
+/// # Parâmetros
+/// - `parent_a`: O primeiro cromossomo pai.
+/// - `parent_b`: O segundo cromossomo pai.
+///
+/// # Retorno
+/// Retorna uma tupla contendo os dois cromossomos filhos resultantes do cruzamento.
 fn two_point_crossover(parent_a: &Chromosome, parent_b: &Chromosome) -> (Chromosome, Chromosome) {
     let mut rng = rand::thread_rng();
     let len = parent_a.genes().len();
@@ -69,10 +96,22 @@ fn two_point_crossover(parent_a: &Chromosome, parent_b: &Chromosome) -> (Chromos
     (Chromosome::new(childa_genes), Chromosome::new(childb_genes))
 }
 
+/// Estratégia de cruzamento de um ponto.
+///
+/// Realiza cruzamentos entre dois pais selecionados, trocando os genes após um único
+/// ponto aleatório.
 pub struct OnePointCrossover {
     crossover_rate: f64,
 }
 
+/// Realiza o cruzamento de um ponto entre dois cromossomos.
+///
+/// # Parâmetros
+/// - `parent_a`: O primeiro cromossomo pai.
+/// - `parent_b`: O segundo cromossomo pai.
+///
+/// # Retorno
+/// Retorna uma tupla contendo os dois cromossomos filhos resultantes do cruzamento.
 fn one_point_crossover(parent_a: &Chromosome, parent_b: &Chromosome) -> (Chromosome, Chromosome) {
     let mut rng = rand::thread_rng();
     let len = parent_a.genes().len();
@@ -94,29 +133,31 @@ fn one_point_crossover(parent_a: &Chromosome, parent_b: &Chromosome) -> (Chromos
 impl CrossoverStrategy for OnePointCrossover {
     fn crossover(&self, population: &Population, graph: &UndirectedGraph<usize>) -> Population {
         if self.crossover_rate == 0.0 {
-            return population.clone(); // Consider returning population directly
+            return population.clone();
         }
 
         let mut rng = rand::thread_rng();
         let mut new_individuals = Vec::with_capacity(population.size());
-        let mut shuffled_individuals = population.individuals().to_vec();
+        let shuffled_individuals = population.individuals();
+
+        let mut shuffled_individuals = shuffled_individuals.to_vec();
         shuffled_individuals.shuffle(&mut rng);
 
-        for pair in shuffled_individuals.chunks_exact(2) {
-            let (parent_a, parent_b) = (&pair[0], &pair[1]);
+        for pair in shuffled_individuals.chunks(2) {
+            if pair.len() == 2 {
+                let (parent_a, parent_b) = (&pair[0], &pair[1]);
 
-            if rng.gen_bool(self.crossover_rate) {
-                let (child_a, child_b) = one_point_crossover(parent_a, parent_b);
-                new_individuals.push(child_a);
-                new_individuals.push(child_b);
+                if rng.gen_bool(self.crossover_rate) {
+                    let (child_a, child_b) = one_point_crossover(parent_a, parent_b);
+                    new_individuals.push(child_a);
+                    new_individuals.push(child_b);
+                } else {
+                    new_individuals.push(parent_a.clone());
+                    new_individuals.push(parent_b.clone());
+                }
             } else {
-                new_individuals.push(parent_a.clone());
-                new_individuals.push(parent_b.clone());
+                new_individuals.push(pair[0].clone());
             }
-        }
-
-        if !shuffled_individuals.is_empty() {
-            new_individuals.push(shuffled_individuals.last().unwrap().clone());
         }
 
         Population::new_from_individuals(new_individuals).validate_population(graph)
