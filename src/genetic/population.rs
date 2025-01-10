@@ -27,7 +27,7 @@ impl Population {
     where
         F: Fn(&UndirectedGraph<usize>) -> Option<Chromosome>,
     {
-        if !graph.has_isolated_vertex() {
+        if graph.has_isolated_vertex() {
             return Err(PopulationError::IsolatedVerticesFound);
         }
 
