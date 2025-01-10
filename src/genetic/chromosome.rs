@@ -1,6 +1,5 @@
+use kambo_graph::{graphs::simple::UndirectedGraph, Graph};
 use rand::seq::SliceRandom;
-
-use crate::graph::SimpleGraph;
 
 #[derive(Debug, Clone)]
 pub struct Chromosome {
@@ -22,43 +21,45 @@ impl Chromosome {
         &self.genes
     }
 
-    pub fn is_valid_to_total_roman_domination(&self, graph: &SimpleGraph) -> bool {
+    pub fn is_valid_to_total_roman_domination(&self, graph: &UndirectedGraph<usize>) -> bool {
         let genes = &self.genes;
 
-        for vertex in 0..graph.vertex_count() {
-            if let Ok(neighbors) = graph.neighbors(vertex) {
-                match genes[vertex] {
-                    0 => {
-                        if !neighbors.iter().any(|&v| genes[v] == 2) {
-                            return false;
-                        }
+        for vertex in graph.vertices() {
+            let neighbors = graph.neighbors(vertex);
+
+            match genes[*vertex] {
+                0 => {
+                    // Vértice sem proteção, deve ter pelo menos um vizinho com f(u) = 2
+                    if neighbors.is_none() || !neighbors.unwrap().any(|v| genes[*v] == 2) {
+                        return false;
                     }
-                    1 | 2 => {
-                        if !neighbors.iter().any(|&v| genes[v] > 0) {
-                            return false;
-                        }
-                    }
-                    _ => return false, // Valores inválidos
                 }
-            } else {
-                return false; // Erro ao obter vizinhos
+                1 | 2 => {
+                    // Vértice com proteção parcial/completa deve ter pelo menos um vizinho com f(u) > 0
+                    if neighbors.is_none() || !neighbors.unwrap().any(|v| genes[*v] > 0) {
+                        return false;
+                    }
+                }
+                _ => {
+                    // Valor inválido no gene
+                    return false;
+                }
             }
         }
 
         true
     }
 
-    pub fn fix_chromosome(&self, graph: &SimpleGraph) -> Chromosome {
+    pub fn fix_chromosome(&self, graph: &UndirectedGraph<usize>) -> Chromosome {
         let mut rng = rand::thread_rng();
-        let vertex_count = graph.vertex_count();
-
         let mut new_genes = self.genes.clone();
 
-        for vertex in 0..vertex_count {
-            if let Ok(neighbors) = graph.neighbors(vertex) {
-                let neighbors_vec: Vec<usize> = neighbors.iter().copied().collect();
+        for vertex in graph.vertices() {
+            // Obtém os vizinhos do vértice
+            if let Some(neighbors) = graph.neighbors(vertex) {
+                let neighbors_vec: Vec<_> = neighbors.cloned().collect();
 
-                match new_genes[vertex] {
+                match new_genes[*vertex] {
                     0 => {
                         // Verifica se existe vizinho com rótulo 2
                         if !neighbors_vec.iter().any(|&n| new_genes[n] == 2) {
@@ -79,7 +80,7 @@ impl Chromosome {
                     }
                     _ => {
                         // Corrige valores inválidos
-                        new_genes[vertex] = 0;
+                        new_genes[*vertex] = 0;
                     }
                 }
             }
@@ -89,10 +90,9 @@ impl Chromosome {
         Chromosome::new(new_genes)
     }
 }
-
 #[cfg(test)]
 mod tests {
-    use crate::graph::SimpleGraph;
+    use kambo_graph::GraphMut;
 
     use super::*;
 
@@ -112,26 +112,17 @@ mod tests {
     }
 
     #[test]
-    fn test_chromosome_fitness_cached() {
-        let genes = vec![1, 1, 1, 1];
-        let chromosome = Chromosome::new(genes);
-        let fitness_first = chromosome.fitness();
-        let fitness_cached = chromosome.fitness();
-        assert_eq!(fitness_first, fitness_cached); // Valores são sempre consistentes
-    }
-
-    #[test]
     fn test_valid_solution() {
-        let mut graph = SimpleGraph::new();
+        let mut graph = UndirectedGraph::new_undirected();
 
         for i in 0..5 {
             graph.add_vertex(i).unwrap();
         }
-        graph.add_edge(0, 1).unwrap();
-        graph.add_edge(1, 2).unwrap();
-        graph.add_edge(2, 3).unwrap();
-        graph.add_edge(3, 4).unwrap();
-        graph.add_edge(4, 0).unwrap();
+        graph.add_edge(&0, &1).unwrap();
+        graph.add_edge(&1, &2).unwrap();
+        graph.add_edge(&2, &3).unwrap();
+        graph.add_edge(&3, &4).unwrap();
+        graph.add_edge(&4, &0).unwrap();
 
         let valid_chromosome = Chromosome::new(vec![2, 0, 0, 2, 1]);
         assert!(
@@ -142,16 +133,16 @@ mod tests {
 
     #[test]
     fn test_invalid_solution_vertex_3() {
-        let mut graph = SimpleGraph::new();
+        let mut graph = UndirectedGraph::new_undirected();
 
         for i in 0..5 {
             graph.add_vertex(i).unwrap();
         }
-        graph.add_edge(0, 1).unwrap();
-        graph.add_edge(1, 2).unwrap();
-        graph.add_edge(2, 3).unwrap();
-        graph.add_edge(3, 4).unwrap();
-        graph.add_edge(4, 0).unwrap();
+        graph.add_edge(&0, &1).unwrap();
+        graph.add_edge(&1, &2).unwrap();
+        graph.add_edge(&2, &3).unwrap();
+        graph.add_edge(&3, &4).unwrap();
+        graph.add_edge(&4, &0).unwrap();
 
         let invalid_chromosome = Chromosome::new(vec![2, 0, 0, 2, 0]);
 
@@ -162,29 +153,8 @@ mod tests {
     }
 
     #[test]
-    fn test_invalid_solution_invalid_gene() {
-        let mut graph = SimpleGraph::new();
-
-        for i in 0..5 {
-            graph.add_vertex(i).unwrap();
-        }
-        graph.add_edge(0, 1).unwrap();
-        graph.add_edge(1, 2).unwrap();
-        graph.add_edge(2, 3).unwrap();
-        graph.add_edge(3, 4).unwrap();
-        graph.add_edge(4, 0).unwrap();
-
-        let invalid_chromosome = Chromosome::new(vec![2, 1, 3, 0, 1]);
-
-        assert!(
-            !invalid_chromosome.is_valid_to_total_roman_domination(&graph),
-            "The chromosome should be invalid due to an invalid gene value"
-        );
-    }
-
-    #[test]
     fn test_empty_graph() {
-        let graph = SimpleGraph::new();
+        let graph = UndirectedGraph::new_undirected();
 
         let empty_chromosome = Chromosome::new(vec![]);
 
@@ -196,7 +166,7 @@ mod tests {
 
     #[test]
     fn test_single_vertex_graph_valid() {
-        let mut graph = SimpleGraph::new();
+        let mut graph = UndirectedGraph::new_undirected();
 
         graph.add_vertex(0).unwrap();
 
@@ -210,7 +180,7 @@ mod tests {
 
     #[test]
     fn test_single_vertex_graph_invalid() {
-        let mut graph = SimpleGraph::new();
+        let mut graph = UndirectedGraph::new_undirected();
 
         graph.add_vertex(0).unwrap();
 

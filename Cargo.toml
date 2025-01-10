@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+kambo-graph = { git = "https://github.com/hscHeric/kambo-graph", tag = "v0.1.0" }
 rand = "0.8.5"
 rayon = "1.10"
 num_cpus = "1.16.0"

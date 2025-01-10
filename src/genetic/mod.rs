@@ -7,7 +7,6 @@ pub mod selection;
 pub use chromosome::Chromosome;
 pub use crossover::CrossoverStrategy;
 pub use crossover::TwoPointCrossover;
-pub use heuristics::h1;
 pub use population::Population;
 pub use selection::KTournamentSelection;
 pub use selection::SelectionStrategy;

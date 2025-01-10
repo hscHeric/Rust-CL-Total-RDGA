@@ -1,4 +1,5 @@
-use crate::graph::SimpleGraph;
+use kambo_graph::graphs::simple::UndirectedGraph;
+use kambo_graph::Graph;
 
 use super::Chromosome;
 
@@ -19,14 +20,14 @@ pub enum PopulationError {
 
 impl Population {
     pub fn new<F>(
-        graph: &SimpleGraph,
+        graph: &UndirectedGraph<usize>,
         mut heuristics: Vec<F>,
         size: usize,
     ) -> Result<Self, PopulationError>
     where
-        F: Fn(&SimpleGraph) -> Option<Chromosome>,
+        F: Fn(&UndirectedGraph<usize>) -> Option<Chromosome>,
     {
-        if !graph.get_isolated_vertices().is_empty() {
+        if !graph.has_isolated_vertex() {
             return Err(PopulationError::IsolatedVerticesFound);
         }
 
@@ -62,27 +63,6 @@ impl Population {
         Ok(Self { individuals, size })
     }
 
-    // pub fn generate_random_valid_chromosome(graph: &SimpleGraph) -> Chromosome {
-    //     let mut rng = rand::thread_rng();
-    //     let vertex_count = graph.vertex_count();
-    //     let max_attempts = 100; // Limite de tentativas
-    //
-    //     for _ in 0..max_attempts {
-    //         let genes: Vec<u8> = (0..vertex_count).map(|_| rng.gen_range(0..=2)).collect();
-    //         let chromosome = Chromosome::new(genes).fix_chromosome(graph);
-    //
-    //         if chromosome.is_valid_to_total_roman_domination(graph) {
-    //             return chromosome;
-    //         }
-    //     }
-    //
-    //     // Fallback: tenta gerar um cromossomo válido com todos os vértices dominados
-    //     let fallback_genes = vec![2; vertex_count];
-    //     let fallback_chromosome = Chromosome::new(fallback_genes);
-    //
-    //     fallback_chromosome.fix_chromosome(graph)
-    // }
-
     pub fn size(&self) -> usize {
         self.size
     }
@@ -111,7 +91,7 @@ impl Population {
         Ok(self.individuals[best_index].clone())
     }
 
-    pub fn validate_population(&self, graph: &SimpleGraph) -> Population {
+    pub fn validate_population(&self, graph: &UndirectedGraph<usize>) -> Population {
         let validated_individuals: Vec<Chromosome> = self
             .individuals
             .iter()
@@ -135,49 +115,51 @@ impl Population {
 
 #[cfg(test)]
 mod tests {
+    use kambo_graph::GraphMut;
+
     use super::*;
 
-    fn create_test_graph() -> SimpleGraph {
-        let mut graph = SimpleGraph::new();
+    fn create_test_graph() -> UndirectedGraph<usize> {
+        let mut graph = UndirectedGraph::<usize>::new_undirected();
         for i in 0..5 {
             graph.add_vertex(i).unwrap();
         }
-        graph.add_edge(0, 1).unwrap();
-        graph.add_edge(1, 2).unwrap();
-        graph.add_edge(2, 3).unwrap();
-        graph.add_edge(3, 4).unwrap();
-        graph.add_edge(4, 0).unwrap();
+        graph.add_edge(&0, &1).unwrap();
+        graph.add_edge(&1, &2).unwrap();
+        graph.add_edge(&2, &3).unwrap();
+        graph.add_edge(&3, &4).unwrap();
+        graph.add_edge(&4, &0).unwrap();
         graph
     }
 
-    fn create_small_test_graph() -> SimpleGraph {
-        let mut graph = SimpleGraph::new();
+    fn create_small_test_graph() -> UndirectedGraph<usize> {
+        let mut graph = UndirectedGraph::<usize>::new_undirected();
         graph.add_vertex(0).unwrap();
         graph.add_vertex(1).unwrap();
         graph.add_vertex(2).unwrap();
-        graph.add_edge(0, 1).unwrap();
-        graph.add_edge(1, 2).unwrap();
+        graph.add_edge(&0, &1).unwrap();
+        graph.add_edge(&1, &2).unwrap();
         graph
     }
 
-    fn heuristic_one(_graph: &SimpleGraph) -> Option<Chromosome> {
+    fn heuristic_one(_graph: &UndirectedGraph<usize>) -> Option<Chromosome> {
         let genes = vec![2, 0, 1, 2, 1];
         Some(Chromosome::new(genes))
     }
 
-    fn heuristic_two(_graph: &SimpleGraph) -> Option<Chromosome> {
+    fn heuristic_two(_graph: &UndirectedGraph<usize>) -> Option<Chromosome> {
         let genes = vec![1, 1, 1, 1, 1];
         Some(Chromosome::new(genes))
     }
 
-    fn failing_heuristic(_graph: &SimpleGraph) -> Option<Chromosome> {
+    fn failing_heuristic(_graph: &UndirectedGraph<usize>) -> Option<Chromosome> {
         None
     }
 
     #[test]
     fn test_population_creation_with_valid_inputs() {
         let graph = create_test_graph();
-        let heuristics: Vec<fn(&SimpleGraph) -> Option<Chromosome>> =
+        let heuristics: Vec<fn(&UndirectedGraph<usize>) -> Option<Chromosome>> =
             vec![heuristic_one, heuristic_two];
         let population_size = 5;
 
@@ -192,7 +174,7 @@ mod tests {
     #[test]
     fn test_population_creation_with_invalid_size() {
         let graph = create_test_graph();
-        let heuristics: Vec<fn(&SimpleGraph) -> Option<Chromosome>> =
+        let heuristics: Vec<fn(&UndirectedGraph<usize>) -> Option<Chromosome>> =
             vec![heuristic_one, heuristic_two];
         let population_size = 1;
 
@@ -205,11 +187,12 @@ mod tests {
 
     #[test]
     fn test_population_creation_with_isolated_vertices() {
-        let mut graph = SimpleGraph::new();
+        let mut graph = UndirectedGraph::<usize>::new_undirected();
         graph.add_vertex(0).unwrap();
         graph.add_vertex(1).unwrap();
 
-        let heuristics: Vec<fn(&SimpleGraph) -> Option<Chromosome>> = vec![heuristic_one];
+        let heuristics: Vec<fn(&UndirectedGraph<usize>) -> Option<Chromosome>> =
+            vec![heuristic_one];
         let population_size = 3;
 
         let result = Population::new(&graph, heuristics, population_size);
@@ -222,7 +205,8 @@ mod tests {
     #[test]
     fn test_population_creation_with_failed_heuristic() {
         let graph = create_test_graph();
-        let heuristics: Vec<fn(&SimpleGraph) -> Option<Chromosome>> = vec![failing_heuristic];
+        let heuristics: Vec<fn(&UndirectedGraph<usize>) -> Option<Chromosome>> =
+            vec![failing_heuristic];
         let population_size = 3;
 
         let result = Population::new(&graph, heuristics, population_size);
@@ -232,7 +216,8 @@ mod tests {
     #[test]
     fn test_population_random_chromosome_generation_and_validity() {
         let graph = create_test_graph();
-        let heuristics: Vec<fn(&SimpleGraph) -> Option<Chromosome>> = vec![heuristic_one];
+        let heuristics: Vec<fn(&UndirectedGraph<usize>) -> Option<Chromosome>> =
+            vec![heuristic_one];
         let population_size = 5;
 
         let population = Population::new(&graph, heuristics, population_size).unwrap();
@@ -250,7 +235,7 @@ mod tests {
     #[test]
     fn test_best_individual_selection() {
         let graph = create_test_graph();
-        let heuristics: Vec<fn(&SimpleGraph) -> Option<Chromosome>> = vec![
+        let heuristics: Vec<fn(&UndirectedGraph<usize>) -> Option<Chromosome>> = vec![
             |_| Some(Chromosome::new(vec![2, 2, 2, 2, 2])),
             |_| Some(Chromosome::new(vec![1, 1, 1, 1, 1])),
             |_| Some(Chromosome::new(vec![2, 0, 2, 0, 2])),
@@ -275,7 +260,8 @@ mod tests {
     #[test]
     fn test_population_with_minimum_size() {
         let graph = create_small_test_graph();
-        let heuristics: Vec<fn(&SimpleGraph) -> Option<Chromosome>> = vec![heuristic_one];
+        let heuristics: Vec<fn(&UndirectedGraph<usize>) -> Option<Chromosome>> =
+            vec![heuristic_one];
         let population_size = 2;
 
         let population = Population::new(&graph, heuristics, population_size).unwrap();
@@ -286,7 +272,8 @@ mod tests {
     #[test]
     fn test_population_individuals_clone() {
         let graph = create_test_graph();
-        let heuristics: Vec<fn(&SimpleGraph) -> Option<Chromosome>> = vec![heuristic_one];
+        let heuristics: Vec<fn(&UndirectedGraph<usize>) -> Option<Chromosome>> =
+            vec![heuristic_one];
         let population_size = 3;
 
         let population = Population::new(&graph, heuristics, population_size).unwrap();

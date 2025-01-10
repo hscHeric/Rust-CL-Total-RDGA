@@ -37,22 +37,24 @@ impl SelectionStrategy for KTournamentSelection {
 
 #[cfg(test)]
 mod tests {
+    use kambo_graph::{graphs::simple::UndirectedGraph, Graph, GraphMut};
+
     use super::*;
-    use crate::{genetic::Chromosome, graph::SimpleGraph};
+    use crate::genetic::Chromosome;
 
     #[test]
     fn test_k_tournament_selection() {
-        let mut graph = SimpleGraph::new();
+        let mut graph = UndirectedGraph::<usize>::new_undirected();
 
         graph.add_vertex(0).unwrap();
         graph.add_vertex(1).unwrap();
         graph.add_vertex(2).unwrap();
         graph.add_vertex(3).unwrap();
 
-        graph.add_edge(0, 1).unwrap();
-        graph.add_edge(1, 2).unwrap();
-        graph.add_edge(2, 3).unwrap();
-        graph.add_edge(3, 0).unwrap();
+        graph.add_edge(&0, &1).unwrap();
+        graph.add_edge(&1, &2).unwrap();
+        graph.add_edge(&2, &3).unwrap();
+        graph.add_edge(&3, &0).unwrap();
 
         let best_chromosome = Chromosome::new(vec![2, 2, 2, 2]); // fitness = 8
         let mid_chromosome = Chromosome::new(vec![1, 2, 1, 2]); // fitness = 6
@@ -101,7 +103,7 @@ mod tests {
         for individual in selected_pop.individuals() {
             assert_eq!(
                 individual.genes().len(),
-                graph.vertex_count(),
+                graph.order(),
                 "Each chromosome should have genes equal to the number of vertices"
             );
         }

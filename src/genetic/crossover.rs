@@ -1,11 +1,10 @@
+use kambo_graph::graphs::simple::UndirectedGraph;
 use rand::{seq::SliceRandom, Rng};
-
-use crate::graph::SimpleGraph;
 
 use super::{Chromosome, Population};
 
 pub trait CrossoverStrategy {
-    fn crossover(&self, population: &Population, graph: &SimpleGraph) -> Population;
+    fn crossover(&self, population: &Population, graph: &UndirectedGraph<usize>) -> Population;
 }
 
 pub struct TwoPointCrossover {
@@ -13,7 +12,7 @@ pub struct TwoPointCrossover {
 }
 
 impl CrossoverStrategy for TwoPointCrossover {
-    fn crossover(&self, population: &Population, graph: &SimpleGraph) -> Population {
+    fn crossover(&self, population: &Population, graph: &UndirectedGraph<usize>) -> Population {
         if self.crossover_rate == 0.0 {
             return population.clone();
         }
@@ -74,14 +73,20 @@ fn two_point_crossover(parent_a: &Chromosome, parent_b: &Chromosome) -> (Chromos
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::graph::SimpleGraph;
+    use kambo_graph::GraphMut;
 
-    fn create_test_graph() -> SimpleGraph {
-        let mut graph = SimpleGraph::new();
-        let _ = graph.add_edge(0, 1);
-        let _ = graph.add_edge(1, 2);
-        let _ = graph.add_edge(2, 3);
+    use super::*;
+
+    fn create_test_graph() -> UndirectedGraph<usize> {
+        let mut graph = UndirectedGraph::<usize>::new_undirected();
+        graph.add_vertex(0).unwrap();
+        graph.add_vertex(1).unwrap();
+        graph.add_vertex(2).unwrap();
+        graph.add_vertex(3).unwrap();
+
+        let _ = graph.add_edge(&0, &1);
+        let _ = graph.add_edge(&1, &2);
+        let _ = graph.add_edge(&2, &3);
         graph
     }
 
