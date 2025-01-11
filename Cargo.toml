@@ -6,7 +6,7 @@ authors = ["Heric da Silva Cruz <hericsilvaho@gmail.com>"]
 license = "MIT"
 
 [dependencies]
-kambo-graph = { git = "https://github.com/hscHeric/kambo-graph", tag = "v0.1.0" }
+kambo-graph = { git = "https://github.com/hscHeric/kambo-graph" }
 rand = "0.8.5"
 rayon = "1.10"
 num_cpus = "1.16.0"
