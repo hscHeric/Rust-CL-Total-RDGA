@@ -58,6 +58,20 @@ use super::Chromosome;
 //     }
 // }
 
+pub fn h1(graph: &UndirectedGraph<usize>) -> Option<Chromosome> {
+    let mut labels = vec![0u8; graph.order()];
+    let mut h = graph.clone();
+
+    loop {
+        todo!("Implementar lógica para tratamento de vértices com grau > 0");
+        if !graph.vertices().any(|v| graph.degree(v).unwrap_or(0) > 0) {
+            break;
+        }
+    }
+    todo!("Implementar lógica para tratamento de vértices com grau == 0");
+    Some(Chromosome::new(labels))
+}
+
 pub fn h2(graph: &UndirectedGraph<usize>) -> Option<Chromosome> {
     todo!()
 }
