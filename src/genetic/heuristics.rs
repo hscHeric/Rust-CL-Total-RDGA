@@ -1,75 +1,63 @@
-use kambo_graph::{graphs::simple::UndirectedGraph, Graph};
+use kambo_graph::{graphs::simple::UndirectedGraph, Graph, GraphMut};
 
 use super::Chromosome;
 
-// pub fn h1(graph: &UndirectedGraph<usize>) -> Option<Chromosome> {
-//     let mut labels = vec![0u8; graph.order()];
-//     let mut working_graph = graph.clone();
-//
-//     loop {
-//         let vertex_with_edges = working_graph
-//             .vertices()
-//             .find(|&&v| working_graph.degree(&v).unwrap_or(0) > 0)
-//             .cloned();
-//
-//         let vertex = match vertex_with_edges {
-//             Some(v) => v,
-//             None => break,
-//         };
-//
-//         let neighbors: Vec<_> = working_graph
-//             .neighbors(&vertex)
-//             .map(|iter| iter.cloned().collect())
-//             .unwrap_or_default();
-//
-//         if !neighbors.is_empty() {
-//             labels[vertex] = 2;
-//
-//             labels[neighbors[0]] = 1;
-//             for &neighbor in &neighbors[1..] {
-//                 labels[neighbor] = 0;
-//             }
-//
-//             working_graph.remove_vertex(&vertex).ok();
-//             for neighbor in neighbors {
-//                 working_graph.remove_vertex(&neighbor).ok();
-//             }
-//         }
-//     }
-//
-//     let isolated_vertices: Vec<_> = working_graph.get_isolated_vertices();
-//     for isolated_vertex in isolated_vertices {
-//         if let Some(neighbors) = graph.neighbors(&isolated_vertex) {
-//             let neighbors: Vec<_> = neighbors.cloned().collect();
-//             if let Some(&neighbor) = neighbors.first() {
-//                 if labels[neighbor] != 2 {
-//                     labels[neighbor] = 2;
-//                     labels[isolated_vertex] = 1;
-//                 }
-//             }
-//         }
-//     }
-//
-//     let chromosome = Chromosome::new(labels);
-//     if chromosome.is_valid_to_total_roman_domination(graph) {
-//         Some(chromosome)
-//     } else {
-//         None
-//     }
-// }
-
 pub fn h1(graph: &UndirectedGraph<usize>) -> Option<Chromosome> {
-    let mut labels = vec![0u8; graph.order()];
     let mut h = graph.clone();
+    let mut genes = vec![3u8; graph.order()];
 
-    loop {
-        todo!("Implementar lógica para tratamento de vértices com grau > 0");
-        if !graph.vertices().any(|v| graph.degree(v).unwrap_or(0) > 0) {
-            break;
+    let mut vertices: Vec<_> = h.vertices().cloned().collect();
+    vertices.sort();
+
+    for v in vertices {
+        if genes[v] == 3 {
+            let degree = h.degree(&v).unwrap_or(0);
+
+            if degree == 0 {
+                genes[v] = 1;
+
+                if let Some(neighbors) = graph.neighbors(&v) {
+                    let mut neighbors_vec: Vec<_> = neighbors.cloned().collect();
+                    neighbors_vec.sort(); // Ordena os vizinhos para consistência
+
+                    if !neighbors_vec.iter().any(|&n| h.degree(&n).unwrap_or(0) > 0) {
+                        if let Some(&neighbor) = neighbors_vec.first() {
+                            genes[neighbor] = 1;
+                        }
+                    }
+                }
+
+                let _ = h.remove_vertex(&v);
+            } else if degree == 1 {
+                genes[v] = 1;
+                let neighbors_vec: Vec<_> = h.neighbors(&v).unwrap().cloned().collect();
+                if let Some(&neighbor) = neighbors_vec.first() {
+                    genes[neighbor] = 1;
+                    h.remove_vertex(&v).ok();
+                    h.remove_vertex(&neighbor).ok();
+                }
+            } else {
+                genes[v] = 2;
+                let mut neighbors_vec: Vec<_> = h.neighbors(&v).unwrap().cloned().collect();
+                neighbors_vec.sort(); // Ordena os vizinhos para consistência
+
+                if let Some(&first_neighbor) = neighbors_vec.first() {
+                    genes[first_neighbor] = 1;
+                }
+
+                for &neighbor in neighbors_vec.iter().skip(1) {
+                    genes[neighbor] = 0;
+                }
+
+                h.remove_vertex(&v).ok();
+                for neighbor in neighbors_vec {
+                    h.remove_vertex(&neighbor).ok();
+                }
+            }
         }
     }
-    todo!("Implementar lógica para tratamento de vértices com grau == 0");
-    Some(Chromosome::new(labels))
+
+    Some(Chromosome::new(genes))
 }
 
 pub fn h2(graph: &UndirectedGraph<usize>) -> Option<Chromosome> {
