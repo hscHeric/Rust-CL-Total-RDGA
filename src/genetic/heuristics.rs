@@ -1,3 +1,5 @@
+use std::{collections::HashSet, usize};
+
 use kambo_graph::{graphs::simple::UndirectedGraph, Graph, GraphMut};
 use rand::seq::IteratorRandom;
 
@@ -199,6 +201,111 @@ pub fn h3(graph: &UndirectedGraph<usize>) -> Option<Chromosome> {
 
             // Passo 12: Remove o vértice `z` do grafo `h`.
             let _ = h.remove_vertex(&z);
+        }
+    }
+
+    // Retorna a solução como um Chromosome, encapsulando o vetor de genes.
+    Some(Chromosome::new(genes))
+}
+
+pub fn h4(graph: &UndirectedGraph<usize>) -> Option<Chromosome> {
+    // Inicializa um vetor de genes com valores 0.
+    // O tamanho do vetor é igual ao número de vértices no grafo.
+    let mut genes = vec![0u8; graph.order()];
+
+    // Faz uma cópia do grafo original para ser manipulado sem alterar o original.
+    let mut h = graph.clone();
+
+    // Enquanto o grafo h ainda tiver vértices... (Já captura o v = vértice de maior grau do grafo)
+    while let Some(v) = h.vertices().max_by_key(|&vertex| h.degree(vertex)).cloned() {
+        // Passo 4: Define f(v) = 2, marcando o vértice v com a cor 2.
+        genes[v] = 2;
+
+        // Obtém os vizinhos de v no grafo `h`.
+        let mut neighbors: Vec<usize> = h
+            .neighbors(&v)
+            .map(|n| n.cloned().collect())
+            .unwrap_or_default();
+
+        // Ordena os vizinhos de forma decrescente pelo grau
+        neighbors.sort_by(|&a, &b| h.degree(&b).cmp(&h.degree(&a)));
+
+        // Passo 5: Se v tem vizinhos, escolha um (o primeiro da lista, ou seja, o com maior grau) e defina f(u) = 1.
+        if let Some(first_neighbor) = neighbors.first() {
+            genes[*first_neighbor] = 1;
+
+            // Passo 6: Para os demais vizinhos de v, define f(w) = 0.
+            for w in neighbors.iter().skip(1) {
+                genes[*w] = 0;
+            }
+        }
+
+        // Passo 7: Remove o vértice `v` e seus vizinhos do grafo `h`.
+        let _ = h.remove_vertex(&v);
+        for neighbor in neighbors {
+            let _ = h.remove_vertex(&neighbor);
+        }
+
+        // Passo 8-14: Processa vértices isolados
+        loop {
+            // Encontra vértices isolados em H
+            let isolated: Vec<usize> = h
+                .vertices()
+                .filter(|&v| h.degree(v).unwrap_or(0) == 0)
+                .cloned()
+                .collect();
+
+            if isolated.is_empty() {
+                break;
+            }
+
+            // Encontra os vizinhos dos vértices isolados no grafo original
+            let mut ns: Vec<usize> = Vec::new();
+            for &s in &isolated {
+                ns.extend(
+                    graph
+                        .neighbors(&s)
+                        .map(|n| n.cloned().collect::<Vec<_>>())
+                        .unwrap_or_default(),
+                );
+            }
+            ns.sort();
+            ns.dedup();
+
+            // Para cada vizinho z em N(S)
+            for &z in &ns {
+                // Conta quantos vizinhos z tem em S
+                let isolated_neighbors = isolated
+                    .iter()
+                    .filter(|&&s| graph.contains_edge(&z, &s))
+                    .count();
+
+                if isolated_neighbors >= 2 {
+                    // Se z tem 2 ou mais vizinhos em S, define f(z) = 2
+                    genes[z] = 2;
+                    // E seus vizinhos em S recebem 0
+                    for &s in &isolated {
+                        if graph.contains_edge(&z, &s) {
+                            genes[s] = 0;
+                        }
+                    }
+                } else {
+                    // Caso contrário, também recebe 2
+                    genes[z] = 2;
+                }
+            }
+
+            // Pinta com 0 os vértices restantes em S
+            for &s in &isolated {
+                if genes[s] == 0 {
+                    genes[s] = 0;
+                }
+            }
+
+            // Remove todos os vértices de S do grafo H
+            for s in isolated {
+                let _ = h.remove_vertex(&s);
+            }
         }
     }
 
