@@ -28,5 +28,11 @@ pub mod selection;
 
 pub use chromosome::Chromosome;
 pub use crossover::{CrossoverStrategy, TwoPointCrossover};
+pub use heuristics::h1;
+pub use heuristics::h2;
+pub use heuristics::h3;
+pub use heuristics::h4;
+pub use heuristics::h5;
+pub use heuristics::Heuristic;
 pub use population::Population;
 pub use selection::{KTournamentSelection, SelectionStrategy};
