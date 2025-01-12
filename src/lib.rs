@@ -11,4 +11,6 @@
 
 /// Implementação dos operadores genéticos
 pub mod genetic;
+
+/// Utilidades
 pub mod utils;

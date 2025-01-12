@@ -1,8 +1,19 @@
-use std::{env, process::exit};
+use std::{env, process::exit, sync::Mutex, time::Instant};
 
-use cl_total_rdga::utils::build_graph_from_edges;
-use kambo_graph::{graphs::simple::UndirectedGraph, utils::edge_list::parse_edge_list, Graph};
-use rayon::ThreadPoolBuilder;
+use cl_total_rdga::{
+    genetic::{
+        crossover::OnePointCrossover, h1, h2, h3, h4, h5, selection, CrossoverStrategy, Heuristic,
+        KTournamentSelection, Population, SelectionStrategy,
+    },
+    utils::build_graph_from_edges,
+};
+use kambo_graph::{
+    graphs::simple::UndirectedGraph, utils::edge_list::parse_edge_list, Graph, GraphMut,
+};
+use rayon::{
+    iter::{IntoParallelIterator, ParallelIterator},
+    ThreadPoolBuilder,
+};
 
 pub fn main() {
     let num_cpus = num_cpus::get();
@@ -47,5 +58,61 @@ pub fn main() {
     let pop_size = args
         .get(7)
         .and_then(|s| s.parse().ok())
-        .unwrap_or_else(|| ((graph.vertex_count() as f64 / 1.5).ceil() as usize).max(1));
+        .unwrap_or_else(|| ((graph.order() as f64 / 1.5).ceil() as usize).max(1));
+
+    let heuristics: Vec<Heuristic> = vec![h1, h2, h3, h4, h5, h1];
+    let crossover_strategy = OnePointCrossover { crossover_rate };
+    let selection_strategy = KTournamentSelection { tournament_size };
+
+    let results = Mutex::new(Vec::new());
+    (0..trials).into_par_iter().for_each(|_| {
+        let start_time = Instant::now();
+        let mut population = Population::new(&graph, heuristics.clone(), pop_size)
+            .expect("Erro ao criar a população inicial");
+
+        let mut best_solution = population
+            .best_individual()
+            .expect("Erro ao obter o melhor indivíduo inicial");
+
+        let mut stagnant_generations = 0;
+        for _ in 0..generations {
+            let selected_population = selection_strategy.select(&population);
+            let offspring_population = crossover_strategy.crossover(&selected_population, &graph);
+            population = offspring_population.validate_population(&graph);
+
+            let new_best_solution = population
+                .best_individual()
+                .expect("Erro ao obter o melhor indivíduo");
+
+            if new_best_solution.fitness() < best_solution.fitness() {
+                best_solution = new_best_solution;
+                stagnant_generations = 0;
+            } else {
+                stagnant_generations += 1;
+            }
+
+            if stagnant_generations >= max_stagnant {
+                break;
+            }
+        }
+
+        let elapsed_time = start_time.elapsed();
+        let graph_name = file_path.split('/').last().unwrap_or("unknown");
+
+        let result = format!(
+            "{},{},{},{},{}",
+            graph_name,
+            graph.order(),
+            graph.edge_count(),
+            best_solution.fitness(),
+            elapsed_time.as_micros()
+        );
+        results.lock().unwrap().push(result);
+    });
+
+    println!("graph_name,graph_order,graph_size,fitness_value,elapsed_time(microsecond)");
+    let results = results.into_inner().unwrap();
+    for result in results {
+        println!("{}", result);
+    }
 }
