@@ -101,7 +101,7 @@ fn two_point_crossover(parent_a: &Chromosome, parent_b: &Chromosome) -> (Chromos
 /// Realiza cruzamentos entre dois pais selecionados, trocando os genes após um único
 /// ponto aleatório.
 pub struct OnePointCrossover {
-    crossover_rate: f64,
+    pub crossover_rate: f64,
 }
 
 /// Realiza o cruzamento de um ponto entre dois cromossomos.
