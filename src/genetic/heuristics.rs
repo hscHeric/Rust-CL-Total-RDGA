@@ -1,78 +1,88 @@
 use kambo_graph::{graphs::simple::UndirectedGraph, Graph, GraphMut};
+use rand::seq::IteratorRandom;
 
 use super::Chromosome;
 
 pub fn h1(graph: &UndirectedGraph<usize>) -> Option<Chromosome> {
+    // Inicializa um vetor de genes com valores 0.
+    // O tamanho do vetor é igual ao número de vértices no grafo.
+    let mut genes = vec![0u8; graph.order()];
+
+    // Faz uma cópia do grafo original para ser manipulado sem alterar o original.
     let mut h = graph.clone();
-    let mut genes = vec![3u8; graph.order()];
 
-    let mut vertices: Vec<_> = h.vertices().cloned().collect();
-    vertices.sort();
+    // Cria um gerador de números aleatórios para escolher vértices aleatoriamente.
+    let mut rng = rand::thread_rng();
 
-    for v in vertices {
-        if genes[v] == 3 {
-            let degree = h.degree(&v).unwrap_or(0);
+    // Enquanto o grafo h ainda tiver vértices...
+    while let Some(v) = h.vertices().choose(&mut rng).cloned() {
+        // Passo 4: Define f(v) = 2, marcando o vértice v com a cor 2.
+        genes[v] = 2;
 
-            if degree == 0 {
-                genes[v] = 1;
+        // Obtém os vizinhos de v no grafo `h`.
+        let neighbors: Vec<usize> = h
+            .neighbors(&v)
+            .map(|n| n.cloned().collect())
+            .unwrap_or_default();
 
-                if let Some(neighbors) = graph.neighbors(&v) {
-                    let mut neighbors_vec: Vec<_> = neighbors.cloned().collect();
-                    neighbors_vec.sort(); // Ordena os vizinhos para consistência
+        // Passo 5: Se v tem vizinhos, escolha um (o primeiro da lista) e defina f(u) = 1.
+        if let Some(first_neighbor) = neighbors.first() {
+            genes[*first_neighbor] = 1;
 
-                    if !neighbors_vec.iter().any(|&n| h.degree(&n).unwrap_or(0) > 0) {
-                        if let Some(&neighbor) = neighbors_vec.first() {
-                            genes[neighbor] = 1;
+            // Passo 6: Para os demais vizinhos de v, define f(w) = 0.
+            for w in neighbors.iter().skip(1) {
+                genes[*w] = 0;
+            }
+        }
+
+        // Passo 7: Remove o vértice `v` e seus vizinhos do grafo `h`.
+        let _ = h.remove_vertex(&v);
+        for neighbor in neighbors {
+            let _ = h.remove_vertex(&neighbor);
+        }
+
+        // Passo 8: Enquanto houver vértices isolados em h...
+        let isolated_vertices = h.get_isolated_vertices();
+        for z in isolated_vertices {
+            // Verifica se `z` tem vizinhos no grafo original `graph` com f = 2.
+            let has_neighbor_with_2 = graph
+                .neighbors(&z)
+                .map(|mut neighbors| neighbors.any(|n| genes[*n] == 2))
+                .unwrap_or(false);
+
+            // Se existe algum vizinho com f = 2, define f(z) = 0.
+            if has_neighbor_with_2 {
+                genes[z] = 0;
+            } else {
+                // Caso contrário, define f(z) = 1.
+                genes[z] = 1;
+                let has_neighbor_with_1 = graph
+                    .neighbors(&z)
+                    .map(|mut neighbors| neighbors.any(|n| genes[*n] == 1))
+                    .unwrap_or(false);
+
+                // Verifica se `z` tem vizinhos no grafo original com f = 1.
+                if !has_neighbor_with_1 {
+                    // Se não há vizinhos com f = 1, escolhe um vizinho com f = 0 e define f = 1.
+                    if let Some(mut neighbors) = graph.neighbors(&z) {
+                        if let Some(first) = neighbors.find(|&n| genes[*n] == 0) {
+                            genes[*first] = 1;
                         }
                     }
                 }
-
-                let _ = h.remove_vertex(&v);
-            } else if degree == 1 {
-                genes[v] = 1;
-                let neighbors_vec: Vec<_> = h.neighbors(&v).unwrap().cloned().collect();
-                if let Some(&neighbor) = neighbors_vec.first() {
-                    genes[neighbor] = 1;
-                    h.remove_vertex(&v).ok();
-                    h.remove_vertex(&neighbor).ok();
-                }
-            } else {
-                genes[v] = 2;
-                let mut neighbors_vec: Vec<_> = h.neighbors(&v).unwrap().cloned().collect();
-                neighbors_vec.sort(); // Ordena os vizinhos para consistência
-
-                if let Some(&first_neighbor) = neighbors_vec.first() {
-                    genes[first_neighbor] = 1;
-                }
-
-                for &neighbor in neighbors_vec.iter().skip(1) {
-                    genes[neighbor] = 0;
-                }
-
-                h.remove_vertex(&v).ok();
-                for neighbor in neighbors_vec {
-                    h.remove_vertex(&neighbor).ok();
-                }
             }
+
+            // Passo 12: Remove o vértice `z` do grafo `h`.
+            let _ = h.remove_vertex(&z);
         }
     }
 
+    // Retorna a solução como um Chromosome, encapsulando o vetor de genes.
     Some(Chromosome::new(genes))
 }
 
-pub fn h2(graph: &UndirectedGraph<usize>) -> Option<Chromosome> {
-    todo!()
-}
-
-pub fn h3(graph: &UndirectedGraph<usize>) -> Option<Chromosome> {
-    todo!()
-}
-
-pub fn h4(graph: &UndirectedGraph<usize>) -> Option<Chromosome> {
-    todo!()
-}
-
 pub fn h5(graph: &UndirectedGraph<usize>) -> Option<Chromosome> {
+    // Cria um vetor de genes com todos os vértices rotulados com valor 1;
     let genes: Vec<u8> = vec![1; graph.order()];
     Some(Chromosome::new(genes))
 }
