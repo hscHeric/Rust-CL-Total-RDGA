@@ -44,30 +44,19 @@ pub fn h1(graph: &UndirectedGraph<usize>) -> Option<Chromosome> {
         // Passo 8: Enquanto houver vértices isolados em h...
         let isolated_vertices = h.get_isolated_vertices();
         for z in isolated_vertices {
-            // Verifica se `z` tem vizinhos no grafo original `graph` com f = 2.
-            let has_neighbor_with_2 = graph
+            // Caso contrário, define f(z) = 1.
+            genes[z] = 1;
+            let has_neighbor_with_1 = graph
                 .neighbors(&z)
-                .map(|mut neighbors| neighbors.any(|n| genes[*n] == 2))
+                .map(|mut neighbors| neighbors.any(|n| genes[*n] == 1))
                 .unwrap_or(false);
 
-            // Se existe algum vizinho com f = 2, define f(z) = 0.
-            if has_neighbor_with_2 {
-                genes[z] = 0;
-            } else {
-                // Caso contrário, define f(z) = 1.
-                genes[z] = 1;
-                let has_neighbor_with_1 = graph
-                    .neighbors(&z)
-                    .map(|mut neighbors| neighbors.any(|n| genes[*n] == 1))
-                    .unwrap_or(false);
-
-                // Verifica se `z` tem vizinhos no grafo original com f = 1.
-                if !has_neighbor_with_1 {
-                    // Se não há vizinhos com f = 1, escolhe um vizinho com f = 0 e define f = 1.
-                    if let Some(mut neighbors) = graph.neighbors(&z) {
-                        if let Some(first) = neighbors.find(|&n| genes[*n] == 0) {
-                            genes[*first] = 1;
-                        }
+            // Verifica se `z` tem vizinhos no grafo original com f = 1.
+            if !has_neighbor_with_1 {
+                // Se não há vizinhos com f = 1, escolhe um vizinho com f = 0 e define f = 1.
+                if let Some(mut neighbors) = graph.neighbors(&z) {
+                    if let Some(first) = neighbors.find(|&n| genes[*n] == 0) {
+                        genes[*first] = 1;
                     }
                 }
             }
@@ -125,30 +114,18 @@ pub fn h2(graph: &UndirectedGraph<usize>) -> Option<Chromosome> {
         // Passo 8: Enquanto houver vértices isolados em h...
         let isolated_vertices = h.get_isolated_vertices();
         for z in isolated_vertices {
-            // Verifica se `z` tem vizinhos no grafo original `graph` com f = 2.
-            let has_neighbor_with_2 = graph
+            genes[z] = 1;
+            let has_neighbor_with_1 = graph
                 .neighbors(&z)
-                .map(|mut neighbors| neighbors.any(|n| genes[*n] == 2))
+                .map(|mut neighbors| neighbors.any(|n| genes[*n] == 1))
                 .unwrap_or(false);
 
-            // Se existe algum vizinho com f = 2, define f(z) = 0.
-            if has_neighbor_with_2 {
-                genes[z] = 0;
-            } else {
-                // Caso contrário, define f(z) = 1.
-                genes[z] = 1;
-                let has_neighbor_with_1 = graph
-                    .neighbors(&z)
-                    .map(|mut neighbors| neighbors.any(|n| genes[*n] == 1))
-                    .unwrap_or(false);
-
-                // Verifica se `z` tem vizinhos no grafo original com f = 1.
-                if !has_neighbor_with_1 {
-                    // Se não há vizinhos com f = 1, escolhe um vizinho com f = 0 e define f = 1.
-                    if let Some(mut neighbors) = graph.neighbors(&z) {
-                        if let Some(first) = neighbors.find(|&n| genes[*n] == 0) {
-                            genes[*first] = 1;
-                        }
+            // Verifica se `z` tem vizinhos no grafo original com f = 1.
+            if !has_neighbor_with_1 {
+                // Se não há vizinhos com f = 1, escolhe um vizinho com f = 0 e define f = 1.
+                if let Some(mut neighbors) = graph.neighbors(&z) {
+                    if let Some(first) = neighbors.find(|&n| genes[*n] == 0) {
+                        genes[*first] = 1;
                     }
                 }
             }
@@ -203,30 +180,19 @@ pub fn h3(graph: &UndirectedGraph<usize>) -> Option<Chromosome> {
         // Passo 8: Enquanto houver vértices isolados em h...
         let isolated_vertices = h.get_isolated_vertices();
         for z in isolated_vertices {
-            // Verifica se `z` tem vizinhos no grafo original `graph` com f = 2.
-            let has_neighbor_with_2 = graph
+            // Caso contrário, define f(z) = 1.
+            genes[z] = 1;
+            let has_neighbor_with_1 = graph
                 .neighbors(&z)
-                .map(|mut neighbors| neighbors.any(|n| genes[*n] == 2))
+                .map(|mut neighbors| neighbors.any(|n| genes[*n] == 1))
                 .unwrap_or(false);
 
-            // Se existe algum vizinho com f = 2, define f(z) = 0.
-            if has_neighbor_with_2 {
-                genes[z] = 0;
-            } else {
-                // Caso contrário, define f(z) = 1.
-                genes[z] = 1;
-                let has_neighbor_with_1 = graph
-                    .neighbors(&z)
-                    .map(|mut neighbors| neighbors.any(|n| genes[*n] == 1))
-                    .unwrap_or(false);
-
-                // Verifica se `z` tem vizinhos no grafo original com f = 1.
-                if !has_neighbor_with_1 {
-                    // Se não há vizinhos com f = 1, escolhe um vizinho com f = 0 e define f = 1.
-                    if let Some(mut neighbors) = graph.neighbors(&z) {
-                        if let Some(first) = neighbors.find(|&n| genes[*n] == 0) {
-                            genes[*first] = 1;
-                        }
+            // Verifica se `z` tem vizinhos no grafo original com f = 1.
+            if !has_neighbor_with_1 {
+                // Se não há vizinhos com f = 1, escolhe um vizinho com f = 0 e define f = 1.
+                if let Some(mut neighbors) = graph.neighbors(&z) {
+                    if let Some(first) = neighbors.find(|&n| genes[*n] == 0) {
+                        genes[*first] = 1;
                     }
                 }
             }
