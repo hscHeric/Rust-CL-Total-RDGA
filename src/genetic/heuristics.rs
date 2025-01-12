@@ -1,8 +1,5 @@
-use core::panic;
-
 use kambo_graph::{graphs::simple::UndirectedGraph, Graph, GraphMut};
 use rand::seq::IteratorRandom;
-use rayon::slice::ParallelSliceMut;
 
 use super::Chromosome;
 
