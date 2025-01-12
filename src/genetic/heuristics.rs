@@ -5,6 +5,8 @@ use rand::seq::IteratorRandom;
 
 use super::Chromosome;
 
+/// Definição do que é uma heursitica no programa pub type Heuristic = fn(&UndirectedGraph<usize>) -> Option<Chromosome>;
+
 pub fn h1(graph: &UndirectedGraph<usize>) -> Option<Chromosome> {
     // Inicializa um vetor de genes com valores 0.
     // O tamanho do vetor é igual ao número de vértices no grafo.
