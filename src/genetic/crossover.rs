@@ -115,13 +115,16 @@ pub struct OnePointCrossover {
 fn one_point_crossover(parent_a: &Chromosome, parent_b: &Chromosome) -> (Chromosome, Chromosome) {
     let mut rng = rand::thread_rng();
     let len = parent_a.genes().len();
-
     let cut_point = rng.gen_range(0..len);
 
-    let mut offspring_a_genes = parent_a.genes()[..cut_point].to_vec();
+    let mut offspring_a_genes = Vec::with_capacity(len);
+    let mut offspring_b_genes = Vec::with_capacity(len);
+
+    // Usando extend_from_slice para copiar os genes de forma mais eficiente
+    offspring_a_genes.extend_from_slice(&parent_a.genes()[..cut_point]);
     offspring_a_genes.extend_from_slice(&parent_b.genes()[cut_point..]);
 
-    let mut offspring_b_genes = parent_b.genes()[..cut_point].to_vec();
+    offspring_b_genes.extend_from_slice(&parent_b.genes()[..cut_point]);
     offspring_b_genes.extend_from_slice(&parent_a.genes()[cut_point..]);
 
     (
@@ -137,15 +140,19 @@ impl CrossoverStrategy for OnePointCrossover {
         }
 
         let mut rng = rand::thread_rng();
-        let mut new_individuals = Vec::with_capacity(population.size());
-        let shuffled_individuals = population.individuals();
+        let population_size = population.size();
+        let mut new_individuals = Vec::with_capacity(population_size);
 
-        let mut shuffled_individuals = shuffled_individuals.to_vec();
-        shuffled_individuals.shuffle(&mut rng);
+        // Criamos um vetor de índices e embaralhamos ele em vez dos indivíduos
+        let mut indices: Vec<usize> = (0..population_size).collect();
+        indices.shuffle(&mut rng);
 
-        for pair in shuffled_individuals.chunks(2) {
-            if pair.len() == 2 {
-                let (parent_a, parent_b) = (&pair[0], &pair[1]);
+        // Processamos os pares de índices
+        for chunk in indices.chunks(2) {
+            if chunk.len() == 2 {
+                let (idx_a, idx_b) = (chunk[0], chunk[1]);
+                let parent_a = &population.individuals()[idx_a];
+                let parent_b = &population.individuals()[idx_b];
 
                 if rng.gen_bool(self.crossover_rate) {
                     let (child_a, child_b) = one_point_crossover(parent_a, parent_b);
@@ -156,7 +163,8 @@ impl CrossoverStrategy for OnePointCrossover {
                     new_individuals.push(parent_b.clone());
                 }
             } else {
-                new_individuals.push(pair[0].clone());
+                // Caso ímpar, apenas adiciona o último indivíduo
+                new_individuals.push(population.individuals()[chunk[0]].clone());
             }
         }
 

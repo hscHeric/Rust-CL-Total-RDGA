@@ -1,5 +1,6 @@
 use kambo_graph::graphs::simple::UndirectedGraph;
 use kambo_graph::Graph;
+use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 
 use super::Chromosome;
 
@@ -139,16 +140,19 @@ impl Population {
     pub fn validate_population(&self, graph: &UndirectedGraph<usize>) -> Population {
         let validated_individuals: Vec<Chromosome> = self
             .individuals
-            .iter()
+            .par_iter() // Itera sobre os indivíduos em paralelo
             .map(|individual| {
                 if individual.is_valid_to_total_roman_domination(graph) {
+                    // Se válido, move diretamente (sem clonagem)
                     individual.clone()
                 } else {
+                    // Corrige o cromossomo e retorna a versão corrigida
                     individual.fix_chromosome(graph)
                 }
             })
             .collect();
 
+        // Cria a nova população a partir dos indivíduos validados
         Population::new_from_individuals(validated_individuals)
     }
 

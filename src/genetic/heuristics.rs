@@ -1,5 +1,3 @@
-use std::{collections::HashSet, usize};
-
 use kambo_graph::{graphs::simple::UndirectedGraph, Graph, GraphMut};
 use rand::seq::IteratorRandom;
 

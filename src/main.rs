@@ -2,14 +2,12 @@ use std::{env, process::exit, sync::Mutex, time::Instant};
 
 use cl_total_rdga::{
     genetic::{
-        crossover::OnePointCrossover, h1, h2, h3, h4, h5, selection, CrossoverStrategy, Heuristic,
+        crossover::OnePointCrossover, h1, h2, h3, h4, h5, CrossoverStrategy, Heuristic,
         KTournamentSelection, Population, SelectionStrategy,
     },
-    utils::build_graph_from_edges,
+    utils::{build_graph_from_edges, normalize_graph},
 };
-use kambo_graph::{
-    graphs::simple::UndirectedGraph, utils::edge_list::parse_edge_list, Graph, GraphMut,
-};
+use kambo_graph::{graphs::simple::UndirectedGraph, utils::edge_list::parse_edge_list, Graph};
 use rayon::{
     iter::{IntoParallelIterator, ParallelIterator},
     ThreadPoolBuilder,
@@ -43,12 +41,9 @@ pub fn main() {
 
     // Criação do grafo
     let edges: Vec<(usize, usize, Option<i32>)> = parse_edge_list(file_path).unwrap_or_default();
-    let mut graph: UndirectedGraph<usize> =
+    let graph: UndirectedGraph<usize> =
         build_graph_from_edges(edges).unwrap_or(UndirectedGraph::new_directed());
-
-    if graph.has_isolated_vertex() {
-        graph.remove_isolated_vertices().unwrap();
-    }
+    let graph = normalize_graph(&graph);
 
     // Parse dos valores opcionais ( O padrão para os valores opcionais vai ser o mesmo do CL-RD)
     let max_stagnant = args.get(3).and_then(|s| s.parse().ok()).unwrap_or(100);
@@ -105,7 +100,7 @@ pub fn main() {
             graph.order(),
             graph.edge_count(),
             best_solution.fitness(),
-            elapsed_time.as_micros()
+            (elapsed_time.as_secs_f64() / 60.0)
         );
         results.lock().unwrap().push(result);
     });
