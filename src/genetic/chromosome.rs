@@ -91,7 +91,7 @@ impl Chromosome {
     /// - Ensure that the size of the `genes` vector matches the number of vertices in the graph
     ///   (`graph.node_count()`).
     /// - Verify that all values in the `genes` vector are either `0`, `1`, or `2` before calling this function.
-    pub fn fix(&mut self, graph: &UnGraph<usize, ()>) {
+    pub fn fix(&mut self, graph: &UnGraph<u32, ()>) {
         let mut visited = vec![false; self.genes.len()];
 
         while visited.iter().any(|&n| !n) {
@@ -184,7 +184,7 @@ mod tests {
     }
     #[test]
     fn test_fix() {
-        let mut graph = UnGraph::<usize, ()>::new_undirected();
+        let mut graph = UnGraph::<u32, ()>::new_undirected();
         let v0 = graph.add_node(0); // Nó 0
         let v1 = graph.add_node(1); // Nó 1
         let v2 = graph.add_node(2); // Nó 2
