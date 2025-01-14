@@ -65,7 +65,22 @@ impl Population {
             chromosomes.push(chromosome);
         }
 
+        chromosomes.sort_unstable_by_key(super::chromosome::Chromosome::fitness);
         Self { chromosomes, size }
+    }
+
+    /// Returns a reference to the chromosome with the best fitness (lowest value).
+    #[inline]
+    #[must_use]
+    pub fn best_chromosome(&self) -> Option<&Chromosome> {
+        self.chromosomes.first()
+    }
+
+    /// Returns a reference to the chromosome with the worst fitness (highest value).
+    #[inline]
+    #[must_use]
+    pub fn worst_chromosome(&self) -> Option<&Chromosome> {
+        self.chromosomes.last()
     }
 
     /// Returns a reference to the chromosomes in the population.
@@ -86,5 +101,106 @@ impl Population {
     #[must_use]
     pub fn size(&self) -> usize {
         self.size
+    }
+
+    /// Adds a new chromosome to the population, maintaining sorted order.
+    /// If the population is at capacity, replaces the worst chromosome if the new one is better.
+    ///
+    /// # Parameters
+    /// - `chromosome`: New chromosome to add
+    ///
+    /// # Returns
+    /// true if the chromosome was added, false if it was rejected
+    pub fn add_chromosome(&mut self, chromosome: Chromosome) -> bool {
+        let new_fitness = chromosome.fitness();
+
+        // If population is not at capacity, insert in sorted position
+        if self.chromosomes.len() < self.size {
+            let pos = self
+                .chromosomes
+                .binary_search_by_key(&new_fitness, super::chromosome::Chromosome::fitness)
+                .unwrap_or_else(|e| e);
+            self.chromosomes.insert(pos, chromosome);
+            return true;
+        }
+
+        // Otherwise, only replace if better than worst
+        if let Some(worst) = self.worst_chromosome() {
+            if new_fitness < worst.fitness() {
+                self.chromosomes.pop();
+                let pos = self
+                    .chromosomes
+                    .binary_search_by_key(&new_fitness, super::chromosome::Chromosome::fitness)
+                    .unwrap_or_else(|e| e);
+                self.chromosomes.insert(pos, chromosome);
+                return true;
+            }
+        }
+
+        false
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::genetic::*;
+
+    use super::*;
+
+    fn create_test_graph() -> UnGraph<u32, ()> {
+        let mut graph = UnGraph::new_undirected();
+        let v0 = graph.add_node(0);
+        let v1 = graph.add_node(1);
+        let v2 = graph.add_node(2);
+        let v3 = graph.add_node(3);
+
+        graph.add_edge(v0, v1, ());
+        graph.add_edge(v1, v2, ());
+        graph.add_edge(v2, v3, ());
+        graph.add_edge(v3, v0, ());
+
+        graph
+    }
+
+    #[test]
+    fn test_population_creation() {
+        let graph = create_test_graph();
+        let heuristics = vec![h1, h2, h3, h4];
+        let pop = Population::new(10, &heuristics, &graph);
+        assert_eq!(pop.size(), 10);
+        assert_eq!(pop.chromosomes().len(), 10);
+    }
+
+    #[test]
+    fn test_population_sorting() {
+        let graph = create_test_graph();
+        let heuristics = vec![h1, h2, h3, h4];
+        let pop = Population::new(10, &heuristics, &graph);
+
+        // Verify population is sorted by fitness
+        let fitnesses: Vec<u32> = pop
+            .chromosomes()
+            .iter()
+            .map(super::super::chromosome::Chromosome::fitness)
+            .collect();
+
+        let mut sorted_fitnesses = fitnesses.clone();
+        sorted_fitnesses.sort_unstable();
+
+        assert_eq!(fitnesses, sorted_fitnesses);
+    }
+
+    #[test]
+    fn test_add_chromosome() {
+        let graph = create_test_graph();
+        let heuristics = vec![h1, h2, h3, h4];
+        let mut pop = Population::new(3, &heuristics, &graph);
+
+        // Add a chromosome with very low fitness
+        let low_fitness_chromosome = Chromosome::new(vec![0, 0, 0, 0]);
+        let added = pop.add_chromosome(low_fitness_chromosome);
+
+        assert!(added);
+        assert_eq!(pop.best_chromosome().unwrap().fitness(), 0);
     }
 }
