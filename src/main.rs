@@ -10,14 +10,7 @@ use env_logger::{Builder, Target};
 use log::{debug, error, info, warn, LevelFilter};
 use rayon::prelude::*;
 use rayon::ThreadPoolBuilder;
-use std::{
-    env,
-    fs::{File, OpenOptions},
-    io::Write,
-    process::exit,
-    sync::Mutex,
-    time::Instant,
-};
+use std::{env, fs::OpenOptions, io::Write, process::exit, sync::Mutex, time::Instant};
 
 // Struct para organizar os resultados
 #[derive(Debug)]
@@ -41,7 +34,6 @@ struct AlgorithmParams {
 fn setup_logger(log_file: &str) -> Result<(), Box<dyn std::error::Error>> {
     let file = OpenOptions::new()
         .create(true)
-        .write(true) // Abre o arquivo para escrita
         .append(true) // Adiciona no final do arquivo, sem sobrescrever
         .open(log_file)?;
 

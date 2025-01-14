@@ -11,14 +11,6 @@ use std::io::{self, BufRead};
 /// # Arguments
 ///
 /// * `graph` - A mutable reference to an undirected graph (`UnGraph<u32, ()>`).
-///
-/// # Example
-///
-/// ```
-/// let mut graph = UnGraph::<u32, ()>::new_undirected();
-/// // Add nodes and edges...
-/// remove_isolated_vertices(&mut graph);
-/// ```
 pub fn remove_isolated_vertices(graph: &mut UnGraph<u32, ()>) {
     let isolated_nodes: Vec<_> = graph
         .node_indices()
