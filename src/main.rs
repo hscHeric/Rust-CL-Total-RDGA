@@ -100,7 +100,7 @@ pub fn main() {
             graph.order(),
             graph.edge_count(),
             best_solution.fitness(),
-            (elapsed_time.as_secs_f64() / 60.0)
+            elapsed_time.as_micros()
         );
         results.lock().unwrap().push(result);
     });
