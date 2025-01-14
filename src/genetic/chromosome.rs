@@ -16,7 +16,6 @@ use petgraph::graph::UnGraph;
 /// let chromosome = Chromosome::new(genes);
 /// println!("{:?}", chromosome.genes());
 /// ```
-
 #[derive(Clone, Debug)]
 pub struct Chromosome {
     genes: Vec<u8>,
@@ -36,7 +35,6 @@ impl Chromosome {
     /// let genes = vec![0, 1, 2];
     /// let chromosome = Chromosome::new(genes);
     /// ```
-
     #[inline]
     #[must_use]
     pub fn new(genes: Vec<u8>) -> Self {
@@ -56,7 +54,6 @@ impl Chromosome {
     /// let chromosome = Chromosome::new(vec![1, 2, 0, 1]);
     /// assert_eq!(chromosome.fitness(), 4); // Sum of the genes
     /// ```
-
     #[inline]
     #[must_use]
     pub fn fitness(&self) -> u32 {
@@ -74,7 +71,6 @@ impl Chromosome {
     /// let chromosome = Chromosome::new(genes.clone());
     /// assert_eq!(chromosome.genes(), &genes);
     /// ```
-
     #[inline]
     #[must_use]
     pub fn genes(&self) -> &[u8] {
@@ -136,7 +132,6 @@ impl Chromosome {
     /// - Ensure that the size of the `genes` vector matches the number of vertices in the graph
     ///   (`graph.node_count()`).
     /// - Verify that all values in the `genes` vector are either `0`, `1`, or `2` before calling this function.
-
     pub fn fix(&mut self, graph: &UnGraph<usize, ()>) {
         let mut visited = vec![false; self.genes.len()];
 
