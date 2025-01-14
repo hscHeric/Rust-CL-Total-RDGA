@@ -62,27 +62,29 @@ fn setup_logger(log_file: &str) -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-fn parse_args() -> Result<(String, usize, AlgorithmParams), String> {
+fn parse_args() -> Result<(String, usize, String, AlgorithmParams), String> {
     let args: Vec<String> = env::args().collect();
-    if args.len() < 3 {
+    if args.len() < 4 {
         return Err(format!(
-            "Usage: {} <file_path> <trials> [max_stagnant] [generations] [tournament_size] [crossover_prob] [pop_size]",
+            "Usage: {} <file_path> <trials> <output_file> [max_stagnant] [generations] [tournament_size] [crossover_prob] [pop_size]",
             args[0]
         ));
     }
 
     let file_path = args[1].clone();
     let trials = args[2].parse().map_err(|_| "Invalid trials parameter")?;
+    let output_file = args[3].clone();
 
     Ok((
         file_path,
         trials,
+        output_file,
         AlgorithmParams {
-            max_stagnant: args.get(3).and_then(|s| s.parse().ok()).unwrap_or(100),
-            generations: args.get(4).and_then(|s| s.parse().ok()).unwrap_or(1000),
-            tournament_size: args.get(5).and_then(|s| s.parse().ok()).unwrap_or(5),
-            crossover_rate: args.get(6).and_then(|s| s.parse().ok()).unwrap_or(0.9),
-            pop_size: args.get(7).and_then(|s| s.parse().ok()).unwrap_or(0),
+            max_stagnant: args.get(4).and_then(|s| s.parse().ok()).unwrap_or(100),
+            generations: args.get(5).and_then(|s| s.parse().ok()).unwrap_or(1000),
+            tournament_size: args.get(6).and_then(|s| s.parse().ok()).unwrap_or(5),
+            crossover_rate: args.get(7).and_then(|s| s.parse().ok()).unwrap_or(0.9),
+            pop_size: args.get(8).and_then(|s| s.parse().ok()).unwrap_or(0),
         },
     ))
 }
@@ -125,7 +127,7 @@ fn main() {
         .expect("Failed to configure Rayon thread pool");
 
     // Parse os argumentos
-    let (file_path, trials, params) = match parse_args() {
+    let (file_path, trials, output_file, params) = match parse_args() {
         Ok(args) => args,
         Err(e) => {
             eprintln!("Error: {}", e);
@@ -180,7 +182,7 @@ fn main() {
 
         let mut stagnant_generations = 0;
         for gen in 0..params.generations {
-            info!("Generation {} in trial {}", gen, trial);
+            debug!("Generation {} in trial {}", gen, trial);
 
             population.envolve(&selector, &crossover, &graph);
 
@@ -192,7 +194,7 @@ fn main() {
             if new_best_solution.fitness() < best_solution.fitness() {
                 best_solution = new_best_solution;
                 stagnant_generations = 0;
-                info!(
+                debug!(
                     "Trial {}: New best solution found in generation {} with fitness {}",
                     trial,
                     gen,
@@ -223,10 +225,6 @@ fn main() {
         });
         info!("Trial {} completed in {:?}", trial, elapsed_time);
     });
-
-    // Gera o nome do arquivo de saída com timestamp
-    let timestamp = Local::now().format("%Y%m%d_%H%M%S");
-    let output_file = format!("results_{}.csv", timestamp);
 
     // Escreve os resultados no arquivo CSV
     let results = results.into_inner().unwrap();
