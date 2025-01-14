@@ -11,3 +11,6 @@
 
 /// Implementation of genetic operators
 pub mod genetic;
+
+/// Utils implementation
+pub mod utils;
