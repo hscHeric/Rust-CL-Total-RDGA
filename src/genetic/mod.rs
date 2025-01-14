@@ -1,38 +1,40 @@
-//! # Módulo Genético
-//!
-//! Este módulo contém as implementações principais para algoritmos genéticos aplicados à
-//! otimização de problemas em grafos.
-//!
-//! ## Componentes
-//!
-//! - **Chromosome**: Representa um cromossomo, incluindo sua estrutura de genes e funções auxiliares.
-//! - **Crossover**: Implementa estratégias de cruzamento genético, como cruzamento de um ponto e dois pontos.
-//! - **Population**: Gerencia populações de cromossomos, incluindo criação, validação e seleção dos melhores indivíduos.
-//! - **Selection**: Contém estratégias de seleção, como torneio, para a escolha de indivíduos para a próxima geração.
-//! - **Heuristics**: Módulo para heurísticas adicionais (pode ser estendido).
-
-#[allow(missing_docs)]
+/// Módulo que contém a implementação da estrutura `Chromosome`.
+///
+/// Este módulo define a estrutura `Chromosome`, que é usada para representar
+/// um cromossomo no contexto de algoritmos genéticos. A estrutura inclui
+/// métodos para criação, avaliação (fitness) e correção (`fix`) com base em um
+/// grafo não direcionado.
+///
+/// # Estrutura do Módulo
+/// - **`Chromosome`**: Estrutura principal que armazena os genes e possui métodos associados.
+/// - **Métodos Principais**:
+///     - `new`: Cria um novo cromossomo.
+///     - `fitness`: Calcula a aptidão (`fitness`) do cromossomo.
+///     - `genes`: Retorna os genes do cromossomo.
+///     - `fix`: Corrige os genes do cromossomo com base em um grafo.
+///
+/// # Exemplo de Uso
+/// ```rust
+/// use crate::chromosome::Chromosome;
+/// use petgraph::graph::UnGraph;
+///
+/// // Criar um cromossomo
+/// let mut chromosome = Chromosome::new(vec![0, 0, 0]);
+///
+/// // Criar um grafo simples
+/// let mut graph = UnGraph::<usize, ()>::new_undirected();
+/// let v0 = graph.add_node(0);
+/// let v1 = graph.add_node(1);
+/// let v2 = graph.add_node(2);
+/// graph.add_edge(v0, v1, ());
+/// graph.add_edge(v1, v2, ());
+///
+/// // Corrigir o cromossomo
+/// chromosome.fix(&graph);
+///
+/// // Verificar os genes corrigidos
+/// println!("{:?}", chromosome.genes());
+/// ```
 pub mod chromosome;
 
-#[allow(missing_docs)]
-pub mod crossover;
-
-#[allow(missing_docs)]
-pub mod heuristics;
-
-#[allow(missing_docs)]
-pub mod population;
-
-#[allow(missing_docs)]
-pub mod selection;
-
 pub use chromosome::Chromosome;
-pub use crossover::{CrossoverStrategy, TwoPointCrossover};
-pub use heuristics::h1;
-pub use heuristics::h2;
-pub use heuristics::h3;
-pub use heuristics::h4;
-pub use heuristics::h5;
-pub use heuristics::Heuristic;
-pub use population::Population;
-pub use selection::{KTournamentSelection, SelectionStrategy};
