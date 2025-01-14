@@ -12,29 +12,35 @@
 ///     - `fitness`: Calculates the fitness of the chromosome.
 ///     - `genes`: Returns the genes of the chromosome.
 ///     - `fix`: Fixes the genes of the chromosome based on a graph.
-///
-/// # Example Usage
-/// ```rust
-/// use crate::chromosome::Chromosome;
-/// use petgraph::graph::UnGraph;
-///
-/// // Create a chromosome
-/// let mut chromosome = Chromosome::new(vec![0, 0, 0]);
-///
-/// // Create a simple graph
-/// let mut graph = UnGraph::<usize, ()>::new_undirected();
-/// let v0 = graph.add_node(0);
-/// let v1 = graph.add_node(1);
-/// let v2 = graph.add_node(2);
-/// graph.add_edge(v0, v1, ());
-/// graph.add_edge(v1, v2, ());
-///
-/// // Fix the chromosome
-/// chromosome.fix(&graph);
-///
-/// // Check the corrected genes
-/// println!("{:?}", chromosome.genes());
-/// ```
 pub mod chromosome;
+
+/// # Heuristic Functions for Graph Labeling
+///
+/// This module provides heuristic implementations for solving graph labeling problems.
+/// Each heuristic function assigns a set of labels (genes) to the vertices of a graph based
+/// on specific rules. The primary goal is to generate a valid chromosome that adheres to
+/// the problem's labeling constraints.
+///
+/// ## Definitions
+/// - **Heuristic:** A function that takes an `UndirectedGraph` as input and returns an `Chromosome`.
+/// - **Chromosome:** Represents a potential solution in the form of a gene vector. Each gene corresponds to a label assigned to a vertex.
+///
+/// ## Public API
+/// - [`Heuristic`]: Defines the type signature for heuristic functions.
+/// - [`h1`]: Implements a randomized heuristic for graph labeling.
+/// - [`h2`]: Implements a heuristic using the vertex with the highest degree.
+/// - [`h3`]: An extension of `h2` that orders neighbors by degree.
+/// - [`h4`]: A heuristic focusing on isolated vertices and their neighbors.
+/// - [`h5`]: A baseline heuristic where all vertices are assigned the same label.
+///
+/// ## Note on Determinism
+/// Heuristics involving randomization or iteration over collections (e.g., `HashSet` or
+/// `HashMap`) may produce non-deterministic results due to the lack of guaranteed iteration order.
+///
+/// ## Usage
+/// Heuristic functions are designed to operate on an [`UnGraph`] and return a labeled
+/// [`Chromosome`]. The implementation of each heuristic ensures that the generated chromosome
+/// is valid according to the labeling rules defined for the problem domain.
+pub mod heuristics;
 
 pub use chromosome::Chromosome;

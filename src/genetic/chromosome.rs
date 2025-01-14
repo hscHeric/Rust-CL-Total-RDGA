@@ -9,13 +9,6 @@ use petgraph::graph::UnGraph;
 /// - `genes: Vec<u8>`: A vector that stores the labels for each vertex in the graph.
 ///   - `0`: Must have a vertex labeled with the value `2` in its neighborhood.
 ///   - `1 | 2`: Must have a vertex labeled with `f > 0` in its neighborhood.
-///
-/// # Example
-/// ```rust
-/// let genes = vec![0, 1, 2];
-/// let chromosome = Chromosome::new(genes);
-/// println!("{:?}", chromosome.genes());
-/// ```
 #[derive(Clone, Debug)]
 pub struct Chromosome {
     genes: Vec<u8>,
@@ -29,12 +22,6 @@ impl Chromosome {
     ///
     /// # Returns
     /// - Returns a new instance of `Chromosome`.
-    ///
-    /// # Example
-    /// ```rust
-    /// let genes = vec![0, 1, 2];
-    /// let chromosome = Chromosome::new(genes);
-    /// ```
     #[inline]
     #[must_use]
     pub fn new(genes: Vec<u8>) -> Self {
@@ -48,12 +35,6 @@ impl Chromosome {
     ///
     /// # Returns
     /// - A `u32` value corresponding to the sum of the genes.
-    ///
-    /// # Example
-    /// ```rust
-    /// let chromosome = Chromosome::new(vec![1, 2, 0, 1]);
-    /// assert_eq!(chromosome.fitness(), 4); // Sum of the genes
-    /// ```
     #[inline]
     #[must_use]
     pub fn fitness(&self) -> u32 {
@@ -64,13 +45,6 @@ impl Chromosome {
     ///
     /// # Returns
     /// - A slice of the gene vector (`&[u8]`).
-    ///
-    /// # Example
-    /// ```rust
-    /// let genes = vec![0, 1, 2];
-    /// let chromosome = Chromosome::new(genes.clone());
-    /// assert_eq!(chromosome.genes(), &genes);
-    /// ```
     #[inline]
     #[must_use]
     pub fn genes(&self) -> &[u8] {
@@ -112,21 +86,6 @@ impl Chromosome {
     ///
     /// # Returns
     /// - None. The `genes` vector is updated in place to reflect the adjustments.
-    ///
-    /// # Examples
-    /// ```rust
-    /// use petgraph::graph::UnGraph;
-    /// let mut graph = UnGraph::<usize, ()>::new_undirected();
-    /// let v0 = graph.add_node(0);
-    /// let v1 = graph.add_node(1);
-    /// let v2 = graph.add_node(2);
-    /// graph.add_edge(v0, v1, ());
-    /// graph.add_edge(v1, v2, ());
-    ///
-    /// let mut chromosome = Chromosome::new(vec![0, 0, 1]);
-    /// chromosome.fix(&graph);
-    /// println!("{:?}", chromosome.genes());
-    /// ```
     ///
     /// # Notes
     /// - Ensure that the size of the `genes` vector matches the number of vertices in the graph
