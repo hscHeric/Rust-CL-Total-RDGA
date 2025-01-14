@@ -43,4 +43,38 @@ pub mod chromosome;
 /// is valid according to the labeling rules defined for the problem domain.
 pub mod heuristics;
 
+/// # Population Module
+///
+/// This module contains the implementation of the `Population` structure,
+/// which represents a collection of chromosomes used in genetic algorithms.
+/// It provides methods for creating, managing, and evaluating populations of
+/// chromosomes.
+///
+/// ## Definitions
+/// - **Population**: A group of chromosomes representing potential solutions
+///   to a problem. The population evolves over generations in genetic algorithms.
+/// - **Chromosome**: Represents an individual solution within the population.
+///   Each chromosome has a fitness value that determines its quality.
+///
+/// ## Structure
+/// - **`Population`**:
+///   The main structure that stores chromosomes and provides methods for:
+///   - Initialization (`new`)
+///   - Accessing chromosomes (`chromosomes`)
+///   - Calculating the average fitness of the population (`average_fitness`)
+///   - Getting the population size (`size`)
+///
+/// ## Public API
+/// - [`Population::new`]: Initializes a new population of chromosomes using heuristics.
+/// - [`Population::chromosomes`]: Returns a slice of chromosomes in the population.
+/// - [`Population::size`]: Returns the size of the population.
+/// - [`Population::average_fitness`]: Calculates the average fitness of the population.
+pub mod population;
+
 pub use chromosome::Chromosome;
+pub use heuristics::h1;
+pub use heuristics::h2;
+pub use heuristics::h3;
+pub use heuristics::h4;
+pub use heuristics::h5;
+pub use population::Population;
