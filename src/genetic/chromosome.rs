@@ -1,100 +1,123 @@
 use petgraph::graph::UnGraph;
 
-/// Estrutura que representa um cromossomo no CL-Total-RDGA.
+/// Structure representing a chromosome in the CL-Total-RDGA.
 ///
-/// Cada cromossomo armazena uma configuração de rótulos \{0, 1, 2\} para os vértices de um grafo,
-/// com o objetivo de satisfazer as condições de dominação romana total.
+/// Each chromosome stores a configuration of labels \{0, 1, 2\} for the vertices of a graph,
+/// with the goal of satisfying the conditions of total Roman domination.
 ///
-/// # Campos
-/// - `genes: Vec<u8>`: Vetor que armazena os rótulos de cada vértice no grafo.
-///   - `0`: Tem que ser um vértice rotulado com valor 2 na sua vizinhança.
-///   - `1 | 2`: Tem que ter um vértice rotulado com um f > 0 em sua vizinhança.
+/// # Fields
+/// - `genes: Vec<u8>`: A vector that stores the labels for each vertex in the graph.
+///   - `0`: Must have a vertex labeled with the value `2` in its neighborhood.
+///   - `1 | 2`: Must have a vertex labeled with `f > 0` in its neighborhood.
 ///
-/// # Exemplo
+/// # Example
 /// ```rust
 /// let genes = vec![0, 1, 2];
 /// let chromosome = Chromosome::new(genes);
 /// println!("{:?}", chromosome.genes());
 /// ```
+
 #[derive(Clone, Debug)]
 pub struct Chromosome {
     genes: Vec<u8>,
 }
 
 impl Chromosome {
-    /// Cria um novo cromossomo a partir de um vetor de genes.
+    /// Creates a new chromosome from a vector of genes.
     ///
-    /// # Parâmetros
-    /// - `genes: Vec<u8>`: O vetor contendo os rótulos iniciais dos vértices.
+    /// # Parameters
+    /// - `genes: Vec<u8>`: The vector containing the initial labels for the vertices.
     ///
-    /// # Retorno
-    /// - Retorna uma nova instância de `Chromosome`.
+    /// # Returns
+    /// - Returns a new instance of `Chromosome`.
     ///
-    /// # Exemplo
+    /// # Example
     /// ```rust
     /// let genes = vec![0, 1, 2];
     /// let chromosome = Chromosome::new(genes);
     /// ```
+
     #[inline]
+    #[must_use]
     pub fn new(genes: Vec<u8>) -> Self {
         Self { genes }
     }
 
-    /// Calcula o valor de "fitness" (aptidão) do cromossomo.
+    /// Calculates the "fitness" value of the chromosome.
     ///
-    /// O fitness é definido como o peso total da função de dominação romana total,
-    /// que é a soma de todos os valores no vetor de genes.
+    /// The fitness is defined as the total weight of the total Roman domination function,
+    /// which is the sum of all values in the gene vector.
     ///
-    /// # Retorno
-    /// - Um valor do tipo `u32`, correspondente à soma dos genes.
+    /// # Returns
+    /// - A `u32` value corresponding to the sum of the genes.
     ///
-    /// # Exemplo
+    /// # Example
     /// ```rust
     /// let chromosome = Chromosome::new(vec![1, 2, 0, 1]);
-    /// assert_eq!(chromosome.fitness(), 4); // Soma dos genes
+    /// assert_eq!(chromosome.fitness(), 4); // Sum of the genes
     /// ```
+
     #[inline]
+    #[must_use]
     pub fn fitness(&self) -> u32 {
-        self.genes.iter().map(|&x| x as u32).sum()
+        self.genes.iter().map(|&x| u32::from(x)).sum()
     }
 
-    /// Retorna um slice contendo os genes do cromossomo.
+    /// Returns a slice containing the genes of the chromosome.
     ///
-    /// # Retorno
-    /// - Um slice do vetor de genes (`&[u8]`).
+    /// # Returns
+    /// - A slice of the gene vector (`&[u8]`).
     ///
-    /// # Exemplo
+    /// # Example
     /// ```rust
     /// let genes = vec![0, 1, 2];
     /// let chromosome = Chromosome::new(genes.clone());
     /// assert_eq!(chromosome.genes(), &genes);
     /// ```
+
     #[inline]
+    #[must_use]
     pub fn genes(&self) -> &[u8] {
         &self.genes
     }
 
-    /// Corrige os genes do cromossomo com base nas relações de um grafo.
+    /// Adjusts the chromosome's genes based on the relationships in the given graph.
     ///
-    /// A função aplica as regras da dominação romana total para garantir que o
-    /// vetor de genes respeite as condições do problema.
+    /// This function enforces the rules of the Total Roman Domination problem to ensure
+    /// the `genes` vector satisfies the problem's constraints.
     ///
-    /// ### Regras Aplicadas:
-    /// 1. **Vértices com rótulo `0`**:
-    ///    - Se nenhum dos vizinhos tiver rótulo `2`, o primeiro vizinho com rótulo `0` é alterado para `2`.
-    /// 2. **Vértices com rótulo `1` ou `2`**:
-    ///    - Se nenhum dos vizinhos tiver rótulo maior que `0`, o primeiro vizinho com rótulo `0` é alterado para `1`.
-    /// 3. **Rótulos inválidos**:
-    ///    - A função lança um `panic!` se algum gene possuir um valor inválido.
+    /// # Rules Applied:
+    /// 1. **Vertices with label `0`**:
+    ///    - If none of its neighbors have the label `2`, the first neighbor with label `0`
+    ///      is updated to `2`.
+    /// 2. **Vertices with label `1` or `2`**:
+    ///    - If none of its neighbors have a label greater than `0`, the first neighbor with
+    ///      label `0` is updated to `1`.
+    /// 3. **Invalid labels**:
+    ///    - The function will panic if any gene in the `genes` vector has a value other than
+    ///      `0`, `1`, or `2`.
     ///
-    /// ### Parâmetros:
+    /// # Panics
+    /// This function will panic in the following situations:
+    /// 1. **Invalid label in the `genes` vector**:
+    ///    - If the `genes` vector contains a value other than `0`, `1`, or `2`.
+    ///    - Panic message: `"Invalid label found! Index: <index>, Value: <value>. \
+    ///      Valid labels are: 0, 1, or 2."`
+    ///
+    /// 2. **Index out of bounds**:
+    ///    - If the graph has more vertices than the size of the `genes` vector, leading to
+    ///      an out-of-bounds access.
+    ///    - Panic message: `"Index out of bounds! Index: <index>. Ensure the `genes` vector \
+    ///      is consistent with the graph."`
+    ///
+    /// # Parameters
     /// - `graph: &UnGraph<usize, ()>`:
-    ///   Um grafo não direcionado representando as relações entre os vértices.
+    ///   An undirected graph representing the relationships between vertices.
     ///
-    /// ### Retorno:
-    /// - Nenhum. Os genes são corrigidos diretamente no vetor `genes`.
+    /// # Returns
+    /// - None. The `genes` vector is updated in place to reflect the adjustments.
     ///
-    /// ### Exemplo
+    /// # Examples
     /// ```rust
     /// use petgraph::graph::UnGraph;
     /// let mut graph = UnGraph::<usize, ()>::new_undirected();
@@ -108,6 +131,12 @@ impl Chromosome {
     /// chromosome.fix(&graph);
     /// println!("{:?}", chromosome.genes());
     /// ```
+    ///
+    /// # Notes
+    /// - Ensure that the size of the `genes` vector matches the number of vertices in the graph
+    ///   (`graph.node_count()`).
+    /// - Verify that all values in the `genes` vector are either `0`, `1`, or `2` before calling this function.
+
     pub fn fix(&mut self, graph: &UnGraph<usize, ()>) {
         let mut visited = vec![false; self.genes.len()];
 
@@ -120,35 +149,55 @@ impl Chromosome {
                 visited[vertex.index()] = true;
                 let neighbors: Vec<_> = graph.neighbors(vertex).collect();
 
-                match self.genes[vertex.index()] {
-                    0 => {
+                // Usa o método `get` ao invés de indexação direta
+                match self.genes.get(vertex.index()) {
+                    Some(&0) => {
                         // Verifica se existe vizinho com rótulo 2
-                        if !neighbors.iter().any(|&n| self.genes[n.index()] == 2) {
+                        if !neighbors
+                            .iter()
+                            .any(|&n| self.genes.get(n.index()) == Some(&2))
+                        {
                             // Seleciona o primeiro vizinho com rótulo 0 e o rotula como 2
-                            if let Some(&neighbor) =
-                                neighbors.iter().find(|&&n| self.genes[n.index()] == 0)
+                            if let Some(&neighbor) = neighbors
+                                .iter()
+                                .find(|&&n| self.genes.get(n.index()) == Some(&0))
                             {
-                                self.genes[neighbor.index()] = 2;
-                                visited[neighbor.index()] = false;
+                                if let Some(gene) = self.genes.get_mut(neighbor.index()) {
+                                    *gene = 2;
+                                    visited[neighbor.index()] = false;
+                                }
                             }
                         }
                     }
-                    1 | 2 => {
-                        if !neighbors.iter().any(|&n| self.genes[n.index()] > 0) {
-                            if let Some(&neighbor) =
-                                neighbors.iter().find(|&&n| self.genes[n.index()] == 0)
+                    Some(&1 | &2) => {
+                        if !neighbors
+                            .iter()
+                            .any(|&n| self.genes.get(n.index()).map_or(false, |&v| v > 0))
+                        {
+                            if let Some(&neighbor) = neighbors
+                                .iter()
+                                .find(|&&n| self.genes.get(n.index()) == Some(&0))
                             {
-                                self.genes[neighbor.index()] = 1;
-                                visited[neighbor.index()] = false;
+                                if let Some(gene) = self.genes.get_mut(neighbor.index()) {
+                                    *gene = 1;
+                                    visited[neighbor.index()] = false;
+                                }
                             }
                         }
                     }
-                    _ => {
+                    Some(&invalid) => {
                         panic!(
                             "Vértice com rótulo inválido encontrado! Índice: {}, Valor: {}. \
                         Os rótulos válidos são: 0, 1, ou 2.",
                             vertex.index(),
-                            self.genes[vertex.index()]
+                            invalid
+                        );
+                    }
+                    None => {
+                        panic!(
+                            "Tentativa de acessar índice fora dos limites! Índice: {}. \
+                        Verifique se o vetor de genes está consistente com o grafo.",
+                            vertex.index()
                         );
                     }
                 }
@@ -196,6 +245,6 @@ mod tests {
         let mut chromosome = Chromosome::new(genes);
         chromosome.fix(&graph);
 
-        assert_eq!(vec![2, 2, 1, 0], chromosome.genes())
+        assert_eq!(vec![2, 2, 1, 0], chromosome.genes());
     }
 }

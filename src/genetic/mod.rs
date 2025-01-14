@@ -1,27 +1,27 @@
-/// Módulo que contém a implementação da estrutura `Chromosome`.
+/// Module that contains the implementation of the `Chromosome` structure.
 ///
-/// Este módulo define a estrutura `Chromosome`, que é usada para representar
-/// um cromossomo no contexto de algoritmos genéticos. A estrutura inclui
-/// métodos para criação, avaliação (fitness) e correção (`fix`) com base em um
-/// grafo não direcionado.
+/// This module defines the `Chromosome` structure, which is used to represent
+/// a chromosome in the context of genetic algorithms. The structure includes
+/// methods for creation, evaluation (fitness), and correction (`fix`) based on an
+/// undirected graph.
 ///
-/// # Estrutura do Módulo
-/// - **`Chromosome`**: Estrutura principal que armazena os genes e possui métodos associados.
-/// - **Métodos Principais**:
-///     - `new`: Cria um novo cromossomo.
-///     - `fitness`: Calcula a aptidão (`fitness`) do cromossomo.
-///     - `genes`: Retorna os genes do cromossomo.
-///     - `fix`: Corrige os genes do cromossomo com base em um grafo.
+/// # Module Structure
+/// - **`Chromosome`**: The main structure that stores the genes and provides associated methods.
+/// - **Main Methods**:
+///     - `new`: Creates a new chromosome.
+///     - `fitness`: Calculates the fitness of the chromosome.
+///     - `genes`: Returns the genes of the chromosome.
+///     - `fix`: Fixes the genes of the chromosome based on a graph.
 ///
-/// # Exemplo de Uso
+/// # Example Usage
 /// ```rust
 /// use crate::chromosome::Chromosome;
 /// use petgraph::graph::UnGraph;
 ///
-/// // Criar um cromossomo
+/// // Create a chromosome
 /// let mut chromosome = Chromosome::new(vec![0, 0, 0]);
 ///
-/// // Criar um grafo simples
+/// // Create a simple graph
 /// let mut graph = UnGraph::<usize, ()>::new_undirected();
 /// let v0 = graph.add_node(0);
 /// let v1 = graph.add_node(1);
@@ -29,10 +29,10 @@
 /// graph.add_edge(v0, v1, ());
 /// graph.add_edge(v1, v2, ());
 ///
-/// // Corrigir o cromossomo
+/// // Fix the chromosome
 /// chromosome.fix(&graph);
 ///
-/// // Verificar os genes corrigidos
+/// // Check the corrected genes
 /// println!("{:?}", chromosome.genes());
 /// ```
 pub mod chromosome;

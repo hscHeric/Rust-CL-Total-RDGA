@@ -1,9 +1,13 @@
 #![deny(missing_docs)]
-//! # Documentação da Crate
-//! Essa crate implementa operadores genéticos para otimização em grafos.
-//!
-//! ## Módulos
-//! - `chromosome`: Define a estrutura e operações de cromossomos.
+#![deny(clippy::all)]
+#![deny(clippy::perf)]
+#![deny(clippy::pedantic)]
 
-/// Implementação dos operadores genéticos
+//! # Crate Documentation
+//! This crate implements genetic operators for graph optimization.
+//!
+//! ## Modules
+//! - `chromosome`: Defines the structure and operations for chromosomes.
+
+/// Implementation of genetic operators
 pub mod genetic;
