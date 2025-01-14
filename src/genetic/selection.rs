@@ -48,7 +48,6 @@ impl Selection for KTournament {
     /// # Returns
     ///
     /// A reference to the selected chromosome.
-
     fn select<'a>(&self, population: &'a Population) -> &'a Chromosome {
         let mut rng = thread_rng();
         let pop_size = population.size();
