@@ -118,6 +118,90 @@ pub fn h1(graph: &UnGraph<u32, ()>) -> Chromosome {
     Chromosome::new(genes)
 }
 
+/// A heuristic function to generate a `Chromosome` using a vertex degree-based approach.
+///
+/// # Overview
+/// This heuristic assigns labels to vertices in an undirected graph (`UnGraph`) by prioritizing
+/// vertices with the highest degree (number of neighbors). This strategy aims to maximize the
+/// impact of the labels on highly connected vertices, which are likely to influence the overall
+/// graph structure.
+///
+/// # Arguments
+/// - `graph`: A reference to the undirected graph (`UnGraph`) for which the chromosome is generated.
+///
+/// # Returns
+/// - A `Chromosome` where genes are assigned based on the following procedure:
+///   1. Identify the vertex with the highest degree that has not yet been processed.
+///   2. Assign label `2` to the selected vertex.
+///   3. Assign label `1` to one of its neighbors, prioritizing those with label `0`.
+///   4. Assign label `0` to the remaining neighbors.
+///   5. Repeat the process until all vertices are labeled.
+///   6. Handle isolated vertices separately, ensuring they satisfy the constraints.
+///
+/// # Constraints
+/// The following constraints are applied during the labeling process:
+/// - A vertex with label `0` must have at least one neighbor with label `2`.
+/// - A vertex with label `1` or `2` must have at least one neighbor with a label greater than `0`.
+/// - Isolated vertices are assigned label `1` by default, with adjustments to satisfy the above rules.
+///
+/// # Notes
+/// This heuristic is similar to `h1`, but it prioritizes vertices with the highest degree
+/// during the selection process, aiming to optimize the influence of the assigned labels.
+#[must_use]
+pub fn h2(graph: &UnGraph<u32, ()>) -> Chromosome {
+    let mut genes = vec![0u8; graph.node_count()];
+    let h = graph.clone();
+    let mut removed: HashSet<usize> = HashSet::new();
+
+    while let Some(v) = h
+        .node_indices()
+        .filter(|n| !removed.contains(&n.index()))
+        .max_by_key(|&n| h.neighbors(n).count())
+    {
+        genes[v.index()] = 2;
+
+        let neighbors: Vec<NodeIndex> = h.neighbors(v).collect();
+        if let Some(&first_neighbor) = neighbors.iter().find(|&&n| genes[n.index()] == 0) {
+            genes[first_neighbor.index()] = 1;
+
+            // Continuamos marcando os demais vizinhos como 0
+            for &w in neighbors.iter().filter(|&&n| n != first_neighbor) {
+                genes[w.index()] = 0;
+            }
+        }
+
+        removed.insert(v.index());
+        for n in neighbors {
+            removed.insert(n.index());
+        }
+
+        // Processa vértices isolados (mesmo código do h1)
+        let isolated: Vec<NodeIndex> = h
+            .node_indices()
+            .filter(|&n| !removed.contains(&n.index()))
+            .filter(|&n| {
+                h.neighbors(n).count() == 0
+                    || h.neighbors(n).all(|nb| removed.contains(&nb.index()))
+            })
+            .collect();
+
+        for z in isolated {
+            genes[z.index()] = 1;
+
+            let has_neighbor_with_1 = graph.neighbors(z).any(|n| genes[n.index()] == 1);
+
+            if !has_neighbor_with_1 {
+                if let Some(n) = graph.neighbors(z).find(|&n| genes[n.index()] == 0) {
+                    genes[n.index()] = 1;
+                }
+            }
+
+            removed.insert(z.index());
+        }
+    }
+    Chromosome::new(genes)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -136,6 +220,23 @@ mod tests {
 
         let chromosome: Chromosome = h1(&graph);
 
+        assert!(is_valid(&chromosome, &graph));
+    }
+
+    #[test]
+    fn test_h2() {
+        let mut graph = UnGraph::<u32, ()>::new_undirected();
+        let v0 = graph.add_node(0); // Nó 0
+        let v1 = graph.add_node(1); // Nó 1
+        let v2 = graph.add_node(2); // Nó 2
+        let v3 = graph.add_node(3); // Nó 3
+
+        graph.add_edge(v0, v1, ());
+        graph.add_edge(v1, v2, ());
+        graph.add_edge(v2, v3, ());
+        graph.add_edge(v3, v0, ());
+
+        let chromosome: Chromosome = h2(&graph);
         assert!(is_valid(&chromosome, &graph));
     }
 }
