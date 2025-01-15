@@ -2,7 +2,7 @@ use petgraph::{
     graph::UnGraph,
     visit::{EdgeRef, NodeIndexable},
 };
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::io::{self, BufRead};
 
@@ -79,14 +79,13 @@ pub fn normalize_graph(graph: &mut UnGraph<u32, ()>) {
 pub fn build_graph(file_path: &str) -> UnGraph<u32, ()> {
     let file = File::open(file_path).expect("Failed to open the file");
     let reader = io::BufReader::new(file);
-
     let mut graph = UnGraph::<u32, ()>::new_undirected();
     let mut node_mapping = HashMap::new();
+    let mut added_edges = HashSet::new();
 
     for line in reader.lines() {
         let line = line.expect("Failed to read a line from the file");
         let parts: Vec<_> = line.split_whitespace().collect();
-
         assert!(parts.len() == 2, "Invalid Line");
 
         let u: u32 = parts[0].parse().expect("Failed to parse node as u32");
@@ -99,12 +98,20 @@ pub fn build_graph(file_path: &str) -> UnGraph<u32, ()> {
 
         let u_index = *node_mapping.entry(u).or_insert_with(|| graph.add_node(u));
         let v_index = *node_mapping.entry(v).or_insert_with(|| graph.add_node(v));
-        graph.add_edge(u_index, v_index, ());
+
+        let edge_key = if u_index.index() < v_index.index() {
+            (u_index.index(), v_index.index())
+        } else {
+            (v_index.index(), u_index.index())
+        };
+
+        // Only add the edge if we haven't seen it before
+        if added_edges.insert(edge_key) {
+            graph.add_edge(u_index, v_index, ());
+        }
     }
 
     remove_isolated_vertices(&mut graph);
-
     normalize_graph(&mut graph);
-
     graph
 }

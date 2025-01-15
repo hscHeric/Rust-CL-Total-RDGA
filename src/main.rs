@@ -133,6 +133,9 @@ fn main() {
         exit(1);
     }
 
+    // Inicia a medição do tempo total
+    let start_time = Instant::now();
+
     // Carrega o grafo
     info!("Reading edge list from file: {}", file_path);
     let graph = build_graph(&file_path);
@@ -226,4 +229,12 @@ fn main() {
     }
 
     info!("Results written to {}", output_file);
+    let total_duration = start_time.elapsed();
+    let total_seconds = total_duration.as_secs();
+    let hours = total_seconds / 3600;
+    let minutes = (total_seconds % 3600) / 60;
+    let seconds = total_seconds % 60;
+
+    let total_time_formatted = format!("{:02}:{:02}:{:02}", hours, minutes, seconds);
+    info!("Total execution time: {}", total_time_formatted);
 }
