@@ -1,12 +1,24 @@
 use kambo_graph::{graphs::simple::UndirectedGraph, Graph, GraphMut};
 use rand::seq::IteratorRandom;
 
-use super::Chromosome;
+use super::chromosome::Chromosome;
 
-/// Definição do que é uma heursitica no programa pub type Heuristic = fn(&UndirectedGraph<usize>) -> Option<Chromosome>;
-pub type Heuristic = fn(&UndirectedGraph<usize>) -> Option<Chromosome>;
+/// Aliases to representation of a Heuristic
+pub type Heuristic = fn(&UndirectedGraph<usize>) -> Chromosome;
 
-pub fn h1(graph: &UndirectedGraph<usize>) -> Option<Chromosome> {
+/// A heuristic function to generate a `Chromosome` using a randomized approach.
+///
+/// # Arguments
+/// - `graph`: A reference to the undirected graph (`UnGraph`) for which the chromosome is generated.
+///
+/// # Returns
+/// - A `Chromosome` where genes are assigned based on the following procedure:
+///   - Randomly select a vertex and assign it label `2`.
+///   - Assign one of its neighbors label `1`.
+///   - Remaining neighbors are labeled `0`.
+///   - Isolated vertices are handled separately and assigned labels to satisfy constraints.
+#[must_use]
+pub fn h1(graph: &UndirectedGraph<usize>) -> Chromosome {
     // Inicializa um vetor de genes com valores 0.
     // O tamanho do vetor é igual ao número de vértices no grafo.
     let mut genes = vec![0u8; graph.order()];
@@ -18,14 +30,14 @@ pub fn h1(graph: &UndirectedGraph<usize>) -> Option<Chromosome> {
     let mut rng = rand::thread_rng();
 
     // Enquanto o grafo h ainda tiver vértices...
-    while let Some(v) = h.vertices().choose(&mut rng).cloned() {
+    while let Some(v) = h.vertices().choose(&mut rng).copied() {
         // Passo 4: Define f(v) = 2, marcando o vértice v com a cor 2.
         genes[v] = 2;
 
         // Obtém os vizinhos de v no grafo `h`.
         let neighbors: Vec<usize> = h
             .neighbors(&v)
-            .map(|n| n.cloned().collect())
+            .map(|n| n.copied().collect())
             .unwrap_or_default();
 
         // Passo 5: Se v tem vizinhos, escolha um (o primeiro da lista) e defina f(u) = 1.
@@ -51,8 +63,7 @@ pub fn h1(graph: &UndirectedGraph<usize>) -> Option<Chromosome> {
             genes[z] = 1;
             let has_neighbor_with_1 = graph
                 .neighbors(&z)
-                .map(|mut neighbors| neighbors.any(|n| genes[*n] == 1))
-                .unwrap_or(false);
+                .is_some_and(|mut neighbors| neighbors.any(|n| genes[*n] == 1));
 
             // Verifica se `z` tem vizinhos no grafo original com f = 1.
             if !has_neighbor_with_1 {
@@ -70,15 +81,39 @@ pub fn h1(graph: &UndirectedGraph<usize>) -> Option<Chromosome> {
     }
 
     // Retorna a solução como um Chromosome, encapsulando o vetor de genes.
-    Some(Chromosome::new(genes))
+    Chromosome::new(genes)
 }
 
-/*
-    Tem comportamente não determinisco, por uma questão de otimização o rust
-    não garante que os iteradores vão retornar os elementos sempre na mesma ordem
-    O método neghbors pode retornar os vizinhos em uma ordem que não é garantida ser consistente entre execuções,
-    já que a implementação interna da estrutura de dados (como HashMap ) pode não preservar a ordem de inserção ou retorno.
-*/
+/// A heuristic function to generate a `Chromosome` using a vertex degree-based approach.
+///
+/// # Overview
+/// This heuristic assigns labels to vertices in an undirected graph (`UnGraph`) by prioritizing
+/// vertices with the highest degree (number of neighbors). This strategy aims to maximize the
+/// impact of the labels on highly connected vertices, which are likely to influence the overall
+/// graph structure.
+///
+/// # Arguments
+/// - `graph`: A reference to the undirected graph (`UnGraph`) for which the chromosome is generated.
+///
+/// # Returns
+/// - A `Chromosome` where genes are assigned based on the following procedure:
+///   1. Identify the vertex with the highest degree that has not yet been processed.
+///   2. Assign label `2` to the selected vertex.
+///   3. Assign label `1` to one of its neighbors, prioritizing those with label `0`.
+///   4. Assign label `0` to the remaining neighbors.
+///   5. Repeat the process until all vertices are labeled.
+///   6. Handle isolated vertices separately, ensuring they satisfy the constraints.
+///
+/// # Constraints
+/// The following constraints are applied during the labeling process:
+/// - A vertex with label `0` must have at least one neighbor with label `2`.
+/// - A vertex with label `1` or `2` must have at least one neighbor with a label greater than `0`.
+/// - Isolated vertices are assigned label `1` by default, with adjustments to satisfy the above rules.
+///
+/// # Notes
+/// This heuristic is similar to `h1`, but it prioritizes vertices with the highest degree
+/// during the selection process, aiming to optimize the influence of the assigned labels.
+#[must_use]
 pub fn h2(graph: &UndirectedGraph<usize>) -> Option<Chromosome> {
     // Inicializa um vetor de genes com valores 0.
     // O tamanho do vetor é igual ao número de vértices no grafo.
@@ -88,14 +123,14 @@ pub fn h2(graph: &UndirectedGraph<usize>) -> Option<Chromosome> {
     let mut h = graph.clone();
 
     // Enquanto o grafo h ainda tiver vértices... (Já captura o v = vértice de maior grau do grafo)
-    while let Some(v) = h.vertices().max_by_key(|&vertex| h.degree(vertex)).cloned() {
+    while let Some(v) = h.vertices().max_by_key(|&vertex| h.degree(vertex)).copied() {
         // Passo 4: Define f(v) = 2, marcando o vértice v com a cor 2.
         genes[v] = 2;
 
         // Obtém os vizinhos de v no grafo `h`.
         let neighbors: Vec<usize> = h
             .neighbors(&v)
-            .map(|n| n.cloned().collect())
+            .map(|n| n.copied().collect())
             .unwrap_or_default();
 
         // Passo 5: Se v tem vizinhos, escolha um (o primeiro da lista) e defina f(u) = 1.
@@ -120,8 +155,7 @@ pub fn h2(graph: &UndirectedGraph<usize>) -> Option<Chromosome> {
             genes[z] = 1;
             let has_neighbor_with_1 = graph
                 .neighbors(&z)
-                .map(|mut neighbors| neighbors.any(|n| genes[*n] == 1))
-                .unwrap_or(false);
+                .is_some_and(|mut neighbors| neighbors.any(|n| genes[*n] == 1));
 
             // Verifica se `z` tem vizinhos no grafo original com f = 1.
             if !has_neighbor_with_1 {
@@ -142,6 +176,35 @@ pub fn h2(graph: &UndirectedGraph<usize>) -> Option<Chromosome> {
     Some(Chromosome::new(genes))
 }
 
+/// A heuristic function to generate a `Chromosome` using a degree-based and neighbor-priority approach.
+///
+/// # Overview
+/// This heuristic assigns labels to vertices in an undirected graph (`UnGraph`) by prioritizing vertices with
+/// the highest degree and further refining the selection of neighbors based on their degrees. The goal is to
+/// maximize the influence of labels while ensuring constraints are satisfied.
+///
+/// # Arguments
+/// - `graph`: A reference to the undirected graph (`UnGraph`) for which the chromosome is generated.
+///
+/// # Returns
+/// - A `Chromosome` where genes are assigned based on the following procedure:
+///   1. Select the vertex with the highest degree among the unprocessed vertices and assign it label `2`.
+///   2. Sort its neighbors by their degrees in descending order and assign label `1` to the neighbor with the
+///      highest degree that is currently labeled `0`.
+///   3. Assign label `0` to the remaining neighbors.
+///   4. Repeat the process until all vertices are labeled.
+///   5. Handle isolated vertices separately to ensure all constraints are satisfied.
+///
+/// # Constraints
+/// The following constraints are enforced during the labeling process:
+/// - A vertex with label `0` must have at least one neighbor with label `2`.
+/// - A vertex with label `1` or `2` must have at least one neighbor with a label greater than `0`.
+/// - Isolated vertices are assigned label `1` by default, with adjustments as necessary.
+///
+/// # Notes
+/// - This heuristic refines the approach of `h2` by introducing a sorting step to prioritize neighbors with higher degrees.
+/// - It is particularly useful in graphs where the connectivity of neighbors significantly influences the solution.
+#[must_use]
 pub fn h3(graph: &UndirectedGraph<usize>) -> Option<Chromosome> {
     // Inicializa um vetor de genes com valores 0.
     // O tamanho do vetor é igual ao número de vértices no grafo.
@@ -151,14 +214,14 @@ pub fn h3(graph: &UndirectedGraph<usize>) -> Option<Chromosome> {
     let mut h = graph.clone();
 
     // Enquanto o grafo h ainda tiver vértices... (Já captura o v = vértice de maior grau do grafo)
-    while let Some(v) = h.vertices().max_by_key(|&vertex| h.degree(vertex)).cloned() {
+    while let Some(v) = h.vertices().max_by_key(|&vertex| h.degree(vertex)).copied() {
         // Passo 4: Define f(v) = 2, marcando o vértice v com a cor 2.
         genes[v] = 2;
 
         // Obtém os vizinhos de v no grafo `h`.
         let mut neighbors: Vec<usize> = h
             .neighbors(&v)
-            .map(|n| n.cloned().collect())
+            .map(|n| n.copied().collect())
             .unwrap_or_default();
 
         // Ordena os vizinhos de forma decrescente pelo grau
@@ -187,8 +250,7 @@ pub fn h3(graph: &UndirectedGraph<usize>) -> Option<Chromosome> {
             genes[z] = 1;
             let has_neighbor_with_1 = graph
                 .neighbors(&z)
-                .map(|mut neighbors| neighbors.any(|n| genes[*n] == 1))
-                .unwrap_or(false);
+                .is_some_and(|mut neighbors| neighbors.any(|n| genes[*n] == 1));
 
             // Verifica se `z` tem vizinhos no grafo original com f = 1.
             if !has_neighbor_with_1 {
@@ -209,6 +271,34 @@ pub fn h3(graph: &UndirectedGraph<usize>) -> Option<Chromosome> {
     Some(Chromosome::new(genes))
 }
 
+/// A heuristic function to generate a `Chromosome` using a degree-based and isolated vertex clustering approach.
+///
+/// # Overview
+/// This heuristic assigns labels to vertices in an undirected graph (`UnGraph`) by prioritizing high-degree vertices
+/// and clustering isolated vertices with common neighbors. It ensures all constraints are met while minimizing label violations.
+///
+/// # Arguments
+/// - `graph`: A reference to the undirected graph (`UnGraph`) for which the chromosome is generated.
+///
+/// # Returns
+/// - A `Chromosome` where genes are assigned based on the following procedure:
+///   1. Select the vertex with the highest degree among unprocessed vertices and assign it label `2`.
+///   2. Sort its neighbors by degree in descending order. Assign label `1` to the highest-degree neighbor, and label `0` to the rest.
+///   3. Repeat this process until all vertices are processed.
+///   4. For isolated vertices:
+///      - Cluster them with their common neighbors, assigning labels to maintain the constraints.
+///      - If a vertex has at least two connections to isolated vertices, it is prioritized for label `2`.
+///
+/// # Constraints
+/// - A vertex with label `0` must have at least one neighbor with label `2`.
+/// - A vertex with label `1` or `2` must have at least one neighbor with a label greater than `0`.
+/// - Isolated vertices are clustered based on shared neighbors and labeled accordingly.
+///
+/// # Notes
+/// - This heuristic extends `h3` by introducing specific handling for isolated vertices, grouping them
+///   into clusters based on their connections to common neighbors.
+/// - It is particularly useful for graphs with sparse regions or large numbers of isolated vertices.
+#[must_use]
 pub fn h4(graph: &UndirectedGraph<usize>) -> Option<Chromosome> {
     // Inicializa um vetor de genes com valores 0.
     // O tamanho do vetor é igual ao número de vértices no grafo.
@@ -218,14 +308,14 @@ pub fn h4(graph: &UndirectedGraph<usize>) -> Option<Chromosome> {
     let mut h = graph.clone();
 
     // Enquanto o grafo h ainda tiver vértices... (Já captura o v = vértice de maior grau do grafo)
-    while let Some(v) = h.vertices().max_by_key(|&vertex| h.degree(vertex)).cloned() {
+    while let Some(v) = h.vertices().max_by_key(|&vertex| h.degree(vertex)).copied() {
         // Passo 4: Define f(v) = 2, marcando o vértice v com a cor 2.
         genes[v] = 2;
 
         // Obtém os vizinhos de v no grafo `h`.
         let mut neighbors: Vec<usize> = h
             .neighbors(&v)
-            .map(|n| n.cloned().collect())
+            .map(|n| n.copied().collect())
             .unwrap_or_default();
 
         // Ordena os vizinhos de forma decrescente pelo grau
@@ -253,7 +343,7 @@ pub fn h4(graph: &UndirectedGraph<usize>) -> Option<Chromosome> {
             let isolated: Vec<usize> = h
                 .vertices()
                 .filter(|&v| h.degree(v).unwrap_or(0) == 0)
-                .cloned()
+                .copied()
                 .collect();
 
             if isolated.is_empty() {
@@ -266,11 +356,11 @@ pub fn h4(graph: &UndirectedGraph<usize>) -> Option<Chromosome> {
                 ns.extend(
                     graph
                         .neighbors(&s)
-                        .map(|n| n.cloned().collect::<Vec<_>>())
+                        .map(|n| n.copied().collect::<Vec<_>>())
                         .unwrap_or_default(),
                 );
             }
-            ns.sort();
+            ns.sort_unstable();
             ns.dedup();
 
             // Para cada vizinho z em N(S)
@@ -383,6 +473,18 @@ pub fn h4(graph: &UndirectedGraph<usize>) -> Option<Chromosome> {
 //     Some(Chromosome::new(genes))
 // }
 
+/// A heuristic function to generate a `Chromosome` by assigning a default label to all vertices.
+///
+/// # Overview
+/// This heuristic generates a `Chromosome` where all vertices in the graph are assigned the same label (`1`).
+/// It serves as a baseline or trivial solution, ensuring all vertices satisfy a minimum labeling constraint.
+///
+/// # Arguments
+/// - `graph`: A reference to the undirected graph (`UnGraph`) for which the chromosome is generated.
+///
+/// # Returns
+/// - A `Chromosome` where all genes are assigned the label `1`.
+#[must_use]
 pub fn h5(graph: &UndirectedGraph<usize>) -> Option<Chromosome> {
     // Cria um vetor de genes com todos os vértices rotulados com valor 1;
     let genes: Vec<u8> = vec![1; graph.order()];

@@ -1,226 +1,194 @@
-use kambo_graph::{graphs::simple::UndirectedGraph, Graph};
-use rand::seq::SliceRandom;
+use std::collections::HashMap;
 
-/// Representa uma possivel solução em um algoritmo genético.
+use kambo_graph::{graphs::simple::UndirectedGraph, Graph};
+
+/// Structure representing a chromosome in the CL-Total-RDGA.
 ///
-/// Cada cromossomo contém uma sequência de genes e um valor de fitness associado.
-#[derive(Debug, Clone)]
+/// Each chromosome stores a configuration of labels \{0, 1, 2\} for the vertices of a graph,
+/// with the goal of satisfying the conditions of total Roman domination.
+///
+/// # Fields
+/// - `genes: Vec<u8>`: A vector that stores the labels for each vertex in the graph.
+///   - `0`: Must have a vertex labeled with the value `2` in its neighborhood.
+///   - `1 | 2`: Must have a vertex labeled with `f > 0` in its neighborhood.
+/// - `neighbors_cache`: cache
+#[derive(Clone, Debug)]
 pub struct Chromosome {
     genes: Vec<u8>,
-    fitness: usize, // Fitness armazenado diretamente
+    neighbors_cache: Option<NeighborsCache>,
+}
+
+#[derive(Clone, Debug)]
+struct NeighborsCache {
+    has_one_neighbor: Vec<bool>,
+    has_two_neighbor: Vec<bool>,
+    vertex_neighbors: HashMap<u32, Vec<u32>>,
 }
 
 impl Chromosome {
-    /// Cria um novo cromossomo com base em uma sequência de genes.
+    /// Creates a new chromosome from a vector of genes.
     ///
-    /// # Parâmetros
-    /// - `genes`: Um vetor de valores representando os genes do cromossomo.
+    /// # Parameters
+    /// - `genes: Vec<u8>`: The vector containing the initial labels for the vertices.
     ///
-    /// # Retorno
-    /// Retorna uma nova instância de `Chromosome`.
+    /// # Returns
+    /// - Returns a new instance of `Chromosome`.
+    #[inline]
+    #[must_use]
     pub fn new(genes: Vec<u8>) -> Self {
-        let fitness = genes.iter().copied().map(usize::from).sum();
-        Self { genes, fitness }
+        Self {
+            genes,
+            neighbors_cache: None,
+        }
     }
 
-    /// Retorna o valor do fitness do cromossomo.
+    /// Calculates the "fitness" value of the chromosome.
     ///
-    /// # Retorno
-    /// O valor do fitness como um número inteiro.
+    /// The fitness is defined as the total weight of the total Roman domination function,
+    /// which is the sum of all values in the gene vector.
+    ///
+    /// # Returns
+    /// - A `u32` value corresponding to the sum of the genes.
+    #[inline]
+    #[must_use]
     pub fn fitness(&self) -> usize {
-        self.fitness
+        self.genes.iter().map(|&x| usize::from(x)).sum()
     }
 
-    /// Retorna uma fatia imutável contendo os genes do cromossomo.
+    /// Returns a slice containing the genes of the chromosome.
     ///
-    /// # Retorno
-    /// Uma referência imutável ao vetor de genes.
+    /// # Returns
+    /// - A slice of the gene vector (`&[u8]`).
+    #[inline]
+    #[must_use]
     pub fn genes(&self) -> &[u8] {
         &self.genes
     }
 
-    /// Verifica se o cromossomo é válido para a dominação romana total.
-    ///
-    /// # Parâmetros
-    /// - `graph`: O grafo no qual o cromossomo será validado.
-    ///
-    /// # Retorno
-    /// Retorna `true` se o cromossomo for válido, caso contrário `false`.
-    pub fn is_valid_to_total_roman_domination(&self, graph: &UndirectedGraph<usize>) -> bool {
-        let genes = &self.genes;
+    fn initialize_cache(&mut self, graph: &UndirectedGraph<u32>) {
+        let vertex_count = self.genes.len();
+        let mut cache = NeighborsCache {
+            has_one_neighbor: vec![false; vertex_count],
+            has_two_neighbor: vec![false; vertex_count],
+            vertex_neighbors: HashMap::with_capacity(vertex_count),
+        };
 
         for vertex in graph.vertices() {
-            let neighbors = graph.neighbors(vertex);
+            let neighbors: Vec<u32> = graph
+                .neighbors(vertex)
+                .map(|n| n.copied().collect())
+                .unwrap_or_default();
 
-            match genes[*vertex] {
-                0 => {
-                    // Vértice sem proteção, deve ter pelo menos um vizinho com f(u) = 2
-                    if neighbors.is_none() || !neighbors.unwrap().any(|v| genes[*v] == 2) {
-                        return false;
-                    }
-                }
-                1 | 2 => {
-                    // Vértice com proteção parcial/completa deve ter pelo menos um vizinho com f(u) > 0
-                    if neighbors.is_none() || !neighbors.unwrap().any(|v| genes[*v] > 0) {
-                        return false;
-                    }
-                }
-                _ => {
-                    // Valor inválido no gene
-                    return false;
-                }
-            }
+            cache.vertex_neighbors.insert(*vertex, neighbors);
         }
 
-        true
+        self.update_cache(&mut cache);
+        self.neighbors_cache = Some(cache);
     }
 
-    /// Corrige os genes do cromossomo para torná-lo válido para a dominação romana total.
-    ///
-    /// # Parâmetros
-    /// - `graph`: O grafo usado para validar e corrigir os genes do cromossomo.
-    ///
-    /// # Retorno
-    /// Retorna um novo `Chromosome` com os genes corrigidos.
-    pub fn fix_chromosome(&self, graph: &UndirectedGraph<usize>) -> Chromosome {
-        let mut rng = rand::thread_rng();
-        let mut new_genes = self.genes.clone();
+    fn update_cache(&self, cache: &mut NeighborsCache) {
+        for (v, neighbors) in &cache.vertex_neighbors {
+            cache.has_one_neighbor[*v as usize] =
+                neighbors.iter().any(|&n| self.genes[n as usize] > 0);
 
-        for vertex in graph.vertices() {
-            // Obtém os vizinhos do vértice
-            if let Some(neighbors) = graph.neighbors(vertex) {
-                let neighbors_vec: Vec<_> = neighbors.cloned().collect();
+            cache.has_two_neighbor[*v as usize] =
+                neighbors.iter().any(|&n| self.genes[n as usize] == 2);
+        }
+    }
 
-                match new_genes[*vertex] {
-                    0 => {
-                        // Verifica se existe vizinho com rótulo 2
-                        if !neighbors_vec.iter().any(|&n| new_genes[n] == 2) {
-                            // Seleciona aleatoriamente um vizinho e rotula como 2
-                            if let Some(&random_neighbor) = neighbors_vec.choose(&mut rng) {
-                                new_genes[random_neighbor] = 2;
+    /// Corrects the chromosome's gene configuration to satisfy the conditions of total Roman domination.
+    ///
+    /// This method ensures that each vertex in the graph satisfies the following conditions:
+    /// - Vertices labeled `0` must have at least one neighbor labeled `2`.
+    /// - Vertices labeled `1` or `2` must have at least one neighbor with a label greater than `0`.
+    ///
+    /// The method iteratively adjusts the labels of vertices in the chromosome until these conditions are met.
+    ///
+    /// # Parameters
+    /// - `graph: &UndirectedGraph<u32>`: The graph representing the structure and relationships
+    ///   between vertices. The graph is used to determine the neighbors of each vertex.
+    ///
+    /// # Details
+    /// - If the `neighbors_cache` is not initialized, this method initializes it before proceeding.
+    /// - The method uses a cache to track which vertices have neighbors with specific labels (`1` or `2`)
+    ///   to optimize label correction.
+    /// - It modifies the gene vector in-place, ensuring all conditions of total Roman domination
+    ///   are satisfied.
+    ///
+    /// # Panics
+    /// - The method will `panic` if a vertex has an invalid label. Valid labels are:
+    ///   - `0`: Requires at least one neighbor labeled `2`.
+    ///   - `1`: Requires at least one neighbor labeled with a value greater than `0`.
+    ///   - `2`: Requires at least one neighbor labeled with a value greater than `0`.
+    ///
+    ///   The panic message includes the vertex index and the invalid label value, providing context for debugging:
+    ///   ```text
+    ///   Vertex with invalid label found! Index: {vertex_idx}, Value: {invalid}.
+    ///   Valid labels are: 0, 1, or 2.
+    pub fn fix(&mut self, graph: &UndirectedGraph<u32>) {
+        if self.neighbors_cache.is_none() {
+            self.initialize_cache(graph);
+        }
+
+        let mut cache = self.neighbors_cache.take().unwrap();
+        let mut modified = true;
+        let mut visited = vec![false; self.genes.len()];
+
+        while modified {
+            modified = false;
+
+            for vertex in graph.vertices() {
+                let vertex_idx = *vertex as usize;
+                if visited[vertex_idx] {
+                    continue;
+                }
+
+                visited[vertex_idx] = true;
+                let neighbors = cache.vertex_neighbors.get(vertex).unwrap();
+                match self.genes.get(vertex_idx) {
+                    Some(&0) => {
+                        if !cache.has_two_neighbor[vertex_idx] {
+                            if let Some(&neighbor_idx) =
+                                neighbors.iter().find(|&&n| self.genes[n as usize] == 0)
+                            {
+                                self.genes[neighbor_idx as usize] = 2;
+                                visited[neighbor_idx as usize] = false;
+                                modified = true;
                             }
                         }
                     }
-                    1 | 2 => {
-                        // Verifica se existe vizinho com rótulo > 0
-                        if !neighbors_vec.iter().any(|&n| new_genes[n] > 0) {
-                            // Seleciona aleatoriamente um vizinho e rotula como 1
-                            if let Some(&random_neighbor) = neighbors_vec.choose(&mut rng) {
-                                new_genes[random_neighbor] = 1;
+                    Some(&1 | &2) => {
+                        if !cache.has_one_neighbor[vertex_idx] {
+                            // Encontra o primeiro vizinho com valor 0 para atualizar para 1
+                            if let Some(&neighbor_idx) =
+                                neighbors.iter().find(|&&n| self.genes[n as usize] == 0)
+                            {
+                                self.genes[neighbor_idx as usize] = 1;
+                                visited[neighbor_idx as usize] = false;
+                                modified = true;
                             }
                         }
                     }
-                    _ => {
-                        // Corrige valores inválidos
-                        new_genes[*vertex] = 0;
+
+                    Some(&invalid) => {
+                        panic!(
+                        "Vértice com rótulo inválido encontrado! Índice: {vertex}, Valor: {invalid}. \
+                            Os rótulos válidos são: 0, 1, ou 2."
+                    );
+                    }
+                    None => {
+                        panic!(
+                            "Tentativa de acessar índice fora dos limites! Índice: {vertex}. \
+                        Verifique se o vetor de genes está consistente com o grafo.",
+                        );
                     }
                 }
             }
+
+            if modified {
+                self.update_cache(&mut cache);
+            }
         }
-
-        // Retorna o novo cromossomo corrigido
-        Chromosome::new(new_genes)
-    }
-}
-#[cfg(test)]
-mod tests {
-    use kambo_graph::GraphMut;
-
-    use super::*;
-
-    #[test]
-    fn test_chromosome_creation() {
-        let genes = vec![1, 0, 1, 1];
-        let chromosome = Chromosome::new(genes.clone());
-        assert_eq!(chromosome.genes(), genes);
-        assert_eq!(chromosome.fitness(), 3); // 1 + 0 + 1 + 1 = 3
-    }
-
-    #[test]
-    fn test_chromosome_fitness() {
-        let genes = vec![1, 0, 1, 1];
-        let chromosome = Chromosome::new(genes);
-        assert_eq!(chromosome.fitness(), 3); // 1 + 0 + 1 + 1 = 3
-    }
-
-    #[test]
-    fn test_valid_solution() {
-        let mut graph = UndirectedGraph::new_undirected();
-
-        for i in 0..5 {
-            graph.add_vertex(i).unwrap();
-        }
-        graph.add_edge(&0, &1).unwrap();
-        graph.add_edge(&1, &2).unwrap();
-        graph.add_edge(&2, &3).unwrap();
-        graph.add_edge(&3, &4).unwrap();
-        graph.add_edge(&4, &0).unwrap();
-
-        let valid_chromosome = Chromosome::new(vec![2, 0, 0, 2, 1]);
-        assert!(
-            valid_chromosome.is_valid_to_total_roman_domination(&graph),
-            "The chromosome should be valid"
-        );
-    }
-
-    #[test]
-    fn test_invalid_solution_vertex_3() {
-        let mut graph = UndirectedGraph::new_undirected();
-
-        for i in 0..5 {
-            graph.add_vertex(i).unwrap();
-        }
-        graph.add_edge(&0, &1).unwrap();
-        graph.add_edge(&1, &2).unwrap();
-        graph.add_edge(&2, &3).unwrap();
-        graph.add_edge(&3, &4).unwrap();
-        graph.add_edge(&4, &0).unwrap();
-
-        let invalid_chromosome = Chromosome::new(vec![2, 0, 0, 2, 0]);
-
-        assert!(
-            !invalid_chromosome.is_valid_to_total_roman_domination(&graph),
-            "The chromosome should be invalid because vertex 3 lacks a neighbor with f(u) > 0"
-        );
-    }
-
-    #[test]
-    fn test_empty_graph() {
-        let graph = UndirectedGraph::new_undirected();
-
-        let empty_chromosome = Chromosome::new(vec![]);
-
-        assert!(
-            empty_chromosome.is_valid_to_total_roman_domination(&graph),
-            "An empty chromosome should be valid for an empty graph"
-        );
-    }
-
-    #[test]
-    fn test_single_vertex_graph_valid() {
-        let mut graph = UndirectedGraph::new_undirected();
-
-        graph.add_vertex(0).unwrap();
-
-        let valid_chromosome = Chromosome::new(vec![2]);
-
-        assert!(
-            !valid_chromosome.is_valid_to_total_roman_domination(&graph),
-            "The chromosome should be invalid for a single vertex with f(v) = 2"
-        );
-    }
-
-    #[test]
-    fn test_single_vertex_graph_invalid() {
-        let mut graph = UndirectedGraph::new_undirected();
-
-        graph.add_vertex(0).unwrap();
-
-        let invalid_chromosome = Chromosome::new(vec![0]);
-
-        assert!(
-            !invalid_chromosome.is_valid_to_total_roman_domination(&graph),
-            "The chromosome should be invalid for a single vertex with f(v) = 0"
-        );
+        self.neighbors_cache = Some(cache);
     }
 }

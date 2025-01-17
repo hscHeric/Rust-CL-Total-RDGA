@@ -1,16 +1,13 @@
-#![warn(missing_docs)]
+#![deny(missing_docs)]
+#![deny(clippy::perf)]
+#![deny(clippy::all)]
+#![deny(clippy::pedantic)]
 
-//! # Documentação da Crate
-//! Essa crate implementa operadores genéticos para otimização em grafos.
+//! # Crate Documentation
+//! This crate implements genetic operators for graph optimization.
 //!
-//! ## Módulos
-//! - `chromosome`: Define a estrutura e operações de cromossomos.
-//! - `population`: Gerencia populações de cromossomos.
-//! - `crossover`: Implementa estratégias de cruzamento genético.
-//! - `selection`: Implementa estratégias de seleção genéticas.
+//! ## Modules
+//! - `chromosome`: Defines the structure and operations for chromosomes.
 
-/// Implementação dos operadores genéticos
+/// Implementation of genetic operators
 pub mod genetic;
-
-/// Utilidades
-pub mod utils;
