@@ -10,7 +10,7 @@ pub trait Crossover {
         &self,
         parent1: &Chromosome,
         parent2: &Chromosome,
-        graph: &UndirectedGraph<u32>,
+        graph: &UndirectedGraph<usize>,
     ) -> (Chromosome, Chromosome);
 }
 
@@ -61,7 +61,7 @@ impl Crossover for SinglePoint {
         &self,
         parent1: &Chromosome,
         parent2: &Chromosome,
-        graph: &UndirectedGraph<u32>,
+        graph: &UndirectedGraph<usize>,
     ) -> (Chromosome, Chromosome) {
         let mut rng = thread_rng();
 

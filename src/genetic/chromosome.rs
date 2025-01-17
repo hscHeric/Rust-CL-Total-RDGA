@@ -22,7 +22,7 @@ pub struct Chromosome {
 struct NeighborsCache {
     has_one_neighbor: Vec<bool>,
     has_two_neighbor: Vec<bool>,
-    vertex_neighbors: HashMap<u32, Vec<u32>>,
+    vertex_neighbors: HashMap<usize, Vec<usize>>,
 }
 
 impl Chromosome {
@@ -65,7 +65,7 @@ impl Chromosome {
         &self.genes
     }
 
-    fn initialize_cache(&mut self, graph: &UndirectedGraph<u32>) {
+    fn initialize_cache(&mut self, graph: &UndirectedGraph<usize>) {
         let vertex_count = self.genes.len();
         let mut cache = NeighborsCache {
             has_one_neighbor: vec![false; vertex_count],
@@ -74,7 +74,7 @@ impl Chromosome {
         };
 
         for vertex in graph.vertices() {
-            let neighbors: Vec<u32> = graph
+            let neighbors: Vec<usize> = graph
                 .neighbors(vertex)
                 .map(|n| n.copied().collect())
                 .unwrap_or_default();
@@ -88,11 +88,9 @@ impl Chromosome {
 
     fn update_cache(&self, cache: &mut NeighborsCache) {
         for (v, neighbors) in &cache.vertex_neighbors {
-            cache.has_one_neighbor[*v as usize] =
-                neighbors.iter().any(|&n| self.genes[n as usize] > 0);
+            cache.has_one_neighbor[*v] = neighbors.iter().any(|&n| self.genes[n] > 0);
 
-            cache.has_two_neighbor[*v as usize] =
-                neighbors.iter().any(|&n| self.genes[n as usize] == 2);
+            cache.has_two_neighbor[*v] = neighbors.iter().any(|&n| self.genes[n] == 2);
         }
     }
 
@@ -125,7 +123,7 @@ impl Chromosome {
     ///   ```text
     ///   Vertex with invalid label found! Index: {vertex_idx}, Value: {invalid}.
     ///   Valid labels are: 0, 1, or 2.
-    pub fn fix(&mut self, graph: &UndirectedGraph<u32>) {
+    pub fn fix(&mut self, graph: &UndirectedGraph<usize>) {
         if self.neighbors_cache.is_none() {
             self.initialize_cache(graph);
         }
@@ -138,7 +136,7 @@ impl Chromosome {
             modified = false;
 
             for vertex in graph.vertices() {
-                let vertex_idx = *vertex as usize;
+                let vertex_idx = { *vertex };
                 if visited[vertex_idx] {
                     continue;
                 }
@@ -149,10 +147,10 @@ impl Chromosome {
                     Some(&0) => {
                         if !cache.has_two_neighbor[vertex_idx] {
                             if let Some(&neighbor_idx) =
-                                neighbors.iter().find(|&&n| self.genes[n as usize] == 0)
+                                neighbors.iter().find(|&&n| self.genes[n] == 0)
                             {
-                                self.genes[neighbor_idx as usize] = 2;
-                                visited[neighbor_idx as usize] = false;
+                                self.genes[neighbor_idx] = 2;
+                                visited[neighbor_idx] = false;
                                 modified = true;
                             }
                         }
@@ -161,10 +159,10 @@ impl Chromosome {
                         if !cache.has_one_neighbor[vertex_idx] {
                             // Encontra o primeiro vizinho com valor 0 para atualizar para 1
                             if let Some(&neighbor_idx) =
-                                neighbors.iter().find(|&&n| self.genes[n as usize] == 0)
+                                neighbors.iter().find(|&&n| self.genes[n] == 0)
                             {
-                                self.genes[neighbor_idx as usize] = 1;
-                                visited[neighbor_idx as usize] = false;
+                                self.genes[neighbor_idx] = 1;
+                                visited[neighbor_idx] = false;
                                 modified = true;
                             }
                         }
