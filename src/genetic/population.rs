@@ -1,6 +1,7 @@
 use kambo_graph::graphs::simple::UndirectedGraph;
+use rand::Rng;
 
-use super::{Chromosome, Heuristic};
+use super::{Chromosome, Crossover, Heuristic, Selection};
 
 /// Represents a population of chromosomes for evolutionary algorithms.
 ///
@@ -85,5 +86,54 @@ impl Population {
     #[must_use]
     pub fn chromosomes(&self) -> &[Chromosome] {
         &self.chromosomes
+    }
+
+    /// Evolves the population by applying selection and crossover operations.
+    ///
+    /// The method iteratively selects parent chromosomes using the provided selection strategy,
+    /// applies the crossover operator to generate offspring, and replaces the population with
+    /// the newly generated chromosomes.
+    ///
+    /// # Parameters
+    /// - `selector: &S`: A reference to a selection strategy that implements the `Selection` trait.
+    ///   The selector is used to choose parent chromosomes from the current population.
+    /// - `crossover: &C`: A reference to a crossover strategy that implements the `Crossover` trait.
+    ///   The crossover operator generates offspring chromosomes from selected parent chromosomes.
+    /// - `graph: &UnGraph<u32, ()>`: A reference to the underlying graph structure, used to validate
+    ///   or influence the crossover operation.
+    ///
+    /// # Behavior
+    /// 1. A new vector of chromosomes is pre-allocated with the same size as the current population.
+    /// 2. While the number of new chromosomes is less than the population size:
+    ///    - Two parent chromosomes are selected using the provided `selector`.
+    ///    - The `crossover` operator is applied to generate two offspring chromosomes.
+    ///    - The offspring chromosomes are added to the new population.
+    /// 3. Once the new population is complete, the chromosomes are added back to the population.
+    #[inline]
+    pub fn envolve<S: Selection, C: Crossover>(
+        &mut self,
+        selector: &S,
+        crossover: &C,
+        graph: &UndirectedGraph<usize>,
+        crossover_rate: f64,
+    ) {
+        let mut new_chromosomes: Vec<Chromosome> = Vec::with_capacity(self.size);
+        let mut rng = rand::thread_rng();
+
+        while new_chromosomes.len() < self.size() {
+            let parent1 = selector.select(self);
+            let parent2 = selector.select(self);
+
+            if rng.gen::<f64>() < crossover_rate {
+                let (child1, child2) = crossover.crossover(parent1, parent2, graph);
+                new_chromosomes.push(child1);
+                new_chromosomes.push(child2);
+            } else {
+                new_chromosomes.push(parent1.clone());
+                new_chromosomes.push(parent2.clone());
+            }
+        }
+
+        self.chromosomes = new_chromosomes;
     }
 }
