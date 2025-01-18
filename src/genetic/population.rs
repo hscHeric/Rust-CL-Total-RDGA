@@ -1,5 +1,4 @@
 use kambo_graph::graphs::simple::UndirectedGraph;
-use rand::Rng;
 
 use super::{Chromosome, Crossover, Heuristic, Selection};
 
