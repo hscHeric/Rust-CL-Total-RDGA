@@ -114,7 +114,7 @@ pub fn h1(graph: &UndirectedGraph<usize>) -> Chromosome {
 /// This heuristic is similar to `h1`, but it prioritizes vertices with the highest degree
 /// during the selection process, aiming to optimize the influence of the assigned labels.
 #[must_use]
-pub fn h2(graph: &UndirectedGraph<usize>) -> Option<Chromosome> {
+pub fn h2(graph: &UndirectedGraph<usize>) -> Chromosome {
     // Inicializa um vetor de genes com valores 0.
     // O tamanho do vetor é igual ao número de vértices no grafo.
     let mut genes = vec![0u8; graph.order()];
@@ -173,7 +173,7 @@ pub fn h2(graph: &UndirectedGraph<usize>) -> Option<Chromosome> {
     }
 
     // Retorna a solução como um Chromosome, encapsulando o vetor de genes.
-    Some(Chromosome::new(genes))
+    Chromosome::new(genes)
 }
 
 /// A heuristic function to generate a `Chromosome` using a degree-based and neighbor-priority approach.
@@ -205,7 +205,7 @@ pub fn h2(graph: &UndirectedGraph<usize>) -> Option<Chromosome> {
 /// - This heuristic refines the approach of `h2` by introducing a sorting step to prioritize neighbors with higher degrees.
 /// - It is particularly useful in graphs where the connectivity of neighbors significantly influences the solution.
 #[must_use]
-pub fn h3(graph: &UndirectedGraph<usize>) -> Option<Chromosome> {
+pub fn h3(graph: &UndirectedGraph<usize>) -> Chromosome {
     // Inicializa um vetor de genes com valores 0.
     // O tamanho do vetor é igual ao número de vértices no grafo.
     let mut genes = vec![0u8; graph.order()];
@@ -268,7 +268,7 @@ pub fn h3(graph: &UndirectedGraph<usize>) -> Option<Chromosome> {
     }
 
     // Retorna a solução como um Chromosome, encapsulando o vetor de genes.
-    Some(Chromosome::new(genes))
+    Chromosome::new(genes)
 }
 
 /// A heuristic function to generate a `Chromosome` using a degree-based and isolated vertex clustering approach.
@@ -299,7 +299,7 @@ pub fn h3(graph: &UndirectedGraph<usize>) -> Option<Chromosome> {
 ///   into clusters based on their connections to common neighbors.
 /// - It is particularly useful for graphs with sparse regions or large numbers of isolated vertices.
 #[must_use]
-pub fn h4(graph: &UndirectedGraph<usize>) -> Option<Chromosome> {
+pub fn h4(graph: &UndirectedGraph<usize>) -> Chromosome {
     // Inicializa um vetor de genes com valores 0.
     // O tamanho do vetor é igual ao número de vértices no grafo.
     let mut genes = vec![0u8; graph.order()];
@@ -401,77 +401,8 @@ pub fn h4(graph: &UndirectedGraph<usize>) -> Option<Chromosome> {
     }
 
     // Retorna a solução como um Chromosome, encapsulando o vetor de genes.
-    Some(Chromosome::new(genes))
+    Chromosome::new(genes)
 }
-
-// pub fn h2(graph: &UndirectedGraph<usize>) -> Option<Chromosome> {
-//     let mut genes = vec![0u8; graph.order()];
-//     let mut h = graph.clone();
-//
-//     // Passo 2: Enquanto tiver vértices em H faça (já capturo o vértice de maior grau):
-//     while let Some(v) = h.vertices().max_by_key(|&v| h.degree(v)).cloned() {
-//         genes[v] = 2;
-//
-//         // Obtém os vizinhos de v no grafo `h`.
-//         let neighbors: Vec<usize> = h
-//             .neighbors(&v)
-//             .map(|n| n.cloned().collect())
-//             .unwrap_or_default();
-//
-//         // Passo 5: Se v tem vizinhos, escolha um (o primeiro da lista) e defina f(u) = 1.
-//         if let Some(first_neighbor) = neighbors.first() {
-//             genes[*first_neighbor] = 1;
-//
-//             // Passo 6: Para os demais vizinhos de v, define f(w) = 0.
-//             for w in neighbors.iter().skip(1) {
-//                 genes[*w] = 0;
-//             }
-//         }
-//
-//         // Passo 7: Remove o vértice `v` e seus vizinhos do grafo `h`.
-//         let _ = h.remove_vertex(&v);
-//         for neighbor in neighbors {
-//             let _ = h.remove_vertex(&neighbor);
-//         }
-//
-//         // Passo 8: Enquanto houver vértices isolados em h...
-//         let isolated_vertices = h.get_isolated_vertices();
-//         for z in isolated_vertices {
-//             // Verifica se `z` tem vizinhos no grafo original `graph` com f = 2.
-//             let has_neighbor_with_2 = graph
-//                 .neighbors(&z)
-//                 .map(|mut neighbors| neighbors.any(|n| genes[*n] == 2))
-//                 .unwrap_or(false);
-//
-//             // Se existe algum vizinho com f = 2, define f(z) = 0.
-//             if has_neighbor_with_2 {
-//                 genes[z] = 0;
-//             } else {
-//                 // Caso contrário, define f(z) = 1.
-//                 genes[z] = 1;
-//                 let has_neighbor_with_1 = graph
-//                     .neighbors(&z)
-//                     .map(|mut neighbors| neighbors.any(|n| genes[*n] == 1))
-//                     .unwrap_or(false);
-//
-//                 // Verifica se `z` tem vizinhos no grafo original com f = 1.
-//                 if !has_neighbor_with_1 {
-//                     // Se não há vizinhos com f = 1, escolhe um vizinho com f = 0 e define f = 1.
-//                     if let Some(mut neighbors) = graph.neighbors(&z) {
-//                         if let Some(first) = neighbors.find(|&n| genes[*n] == 0) {
-//                             genes[*first] = 1;
-//                         }
-//                     }
-//                 }
-//             }
-//
-//             // Passo 12: Remove o vértice `z` do grafo `h`.
-//             let _ = h.remove_vertex(&z);
-//         }
-//     }
-//
-//     Some(Chromosome::new(genes))
-// }
 
 /// A heuristic function to generate a `Chromosome` by assigning a default label to all vertices.
 ///
@@ -485,8 +416,8 @@ pub fn h4(graph: &UndirectedGraph<usize>) -> Option<Chromosome> {
 /// # Returns
 /// - A `Chromosome` where all genes are assigned the label `1`.
 #[must_use]
-pub fn h5(graph: &UndirectedGraph<usize>) -> Option<Chromosome> {
+pub fn h5(graph: &UndirectedGraph<usize>) -> Chromosome {
     // Cria um vetor de genes com todos os vértices rotulados com valor 1;
     let genes: Vec<u8> = vec![1; graph.order()];
-    Some(Chromosome::new(genes))
+    Chromosome::new(genes)
 }

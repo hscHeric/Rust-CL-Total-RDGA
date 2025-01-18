@@ -115,25 +115,26 @@ impl Population {
         selector: &S,
         crossover: &C,
         graph: &UndirectedGraph<usize>,
-        crossover_rate: f64,
     ) {
         let mut new_chromosomes: Vec<Chromosome> = Vec::with_capacity(self.size);
-        let mut rng = rand::thread_rng();
 
         while new_chromosomes.len() < self.size() {
             let parent1 = selector.select(self);
             let parent2 = selector.select(self);
 
-            if rng.gen::<f64>() < crossover_rate {
-                let (child1, child2) = crossover.crossover(parent1, parent2, graph);
-                new_chromosomes.push(child1);
-                new_chromosomes.push(child2);
-            } else {
-                new_chromosomes.push(parent1.clone());
-                new_chromosomes.push(parent2.clone());
-            }
+            let (child1, child2) = crossover.crossover(parent1, parent2, graph);
+            new_chromosomes.push(child1);
+            new_chromosomes.push(child2);
         }
 
         self.chromosomes = new_chromosomes;
+    }
+
+    /// Returns a reference to the chromosome with the best fitness (lowest value).
+    #[must_use]
+    pub fn best_chromosome(&self) -> Option<&Chromosome> {
+        self.chromosomes()
+            .iter()
+            .min_by_key(|chromosome| chromosome.fitness())
     }
 }

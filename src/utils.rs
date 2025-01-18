@@ -1,9 +1,10 @@
 use std::{
+    collections::HashMap,
     fs::File,
     io::{self, BufRead},
 };
 
-use kambo_graph::{graphs::simple::UndirectedGraph, GraphMut};
+use kambo_graph::{graphs::simple::UndirectedGraph, Graph, GraphMut};
 
 /// Builds an undirected graph from a file.
 ///
@@ -55,5 +56,42 @@ pub fn build_graph(file_path: &str) -> UndirectedGraph<usize> {
         graph.add_edge(&u, &v).expect("Failed to add edge");
     }
 
-    graph
+    normalize_graph(&graph)
+}
+
+/// Normalizes the vertex indices of a graph to be contiguous from 0 to n-1.
+///
+/// # Arguments
+///
+/// * `graph` - A mutable reference to an `UndirectedGraph<usize>` to normalize.
+///
+/// # Returns
+/// A new `UndirectedGraph<usize>` with normalized indices.
+fn normalize_graph(graph: &UndirectedGraph<usize>) -> UndirectedGraph<usize> {
+    let mut vertex_map = HashMap::new();
+    let mut new_index = 0;
+
+    // Cria o grafo normalizado
+    let mut normalized_graph = UndirectedGraph::<usize>::new_undirected();
+
+    for &vertex in graph.vertices() {
+        vertex_map.entry(vertex).or_insert_with(|| {
+            let current_index = new_index;
+            normalized_graph.add_vertex(new_index).unwrap();
+            new_index += 1;
+            current_index
+        });
+    }
+
+    for (u, neighbors) in graph.vertices().map(|v| (v, graph.neighbors(v).unwrap())) {
+        for &v in neighbors {
+            let new_u = vertex_map[u];
+            let new_v = vertex_map[&v];
+            if !normalized_graph.contains_edge(&new_u, &new_v) {
+                normalized_graph.add_edge(&new_u, &new_v).unwrap();
+            }
+        }
+    }
+
+    normalized_graph
 }
