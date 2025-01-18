@@ -10,3 +10,5 @@ kambo-graph = { git = "https://github.com/hscHeric/kambo-graph" }
 rand = "0.8.5"
 rayon = "1.10"
 num_cpus = "1.16.0"
+log = "0.4.25"
+env_logger = "0.11.6"
