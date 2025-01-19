@@ -1,0 +1,17 @@
+# Scenario setup
+trainInstancesDir = "./instances/"
+trainInstancesFile = "./instances.txt"
+targetRunner = "./target-runner.sh"
+
+# File parameters
+parameterFile = "./parameters.txt"
+
+# Irace parameters
+maxExperiments = 5000
+parallel = 4
+nbIterations = 5
+minNbSurvival = 3
+
+# Output parameters
+logFile = "./irace.log"
+debugLevel = 0

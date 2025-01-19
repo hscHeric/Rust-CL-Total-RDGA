@@ -1,0 +1,22 @@
+# Arquivo de configuração básico do irace
+
+# O número máximo de experimentos
+maxExperiments = 5000
+
+# O número de configurações em cada iteração
+nbIterations = 5
+
+# O número mínimo de configurações sobreviventes em cada iteração
+minNbSurvival = 3
+
+# Lista de instâncias a serem utilizadas
+instanceFile = "./instances.txt"
+
+# Arquivo com a definição dos parâmetros
+parameterFile = "./parameters.txt"
+
+# Diretório onde os arquivos de log serão salvos
+logFile = "./irace.log"
+
+# Script que será executado para cada teste
+targetRunner = "./target-runner.sh"

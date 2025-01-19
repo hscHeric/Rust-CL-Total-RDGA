@@ -38,7 +38,13 @@ fn parse_args() -> Result<(String, usize, AlgorithmParams), String> {
             "--instance" => {
                 i += 1;
                 if i < args.len() {
-                    instance_path = args[i].clone();
+                    // Remove qualquer ocorrência duplicada de "instances/" no caminho
+                    let path = args[i].clone();
+                    instance_path = if path.contains("instances/instances/") {
+                        path.replace("instances/instances/", "instances/")
+                    } else {
+                        path
+                    };
                 }
             }
             "--trials" => {

@@ -1,0 +1,6 @@
+# name         switch           type    values               [conditions]
+population     "--population "  i       (10, 1000)
+generations    "--generations " i       (100, 2000)
+tournament     "--tournament "  i       (2, 10)
+crossover      "--crossover "  r       (0.1, 1.0)
+stagnation     "--stagnation " i       (50, 500)
