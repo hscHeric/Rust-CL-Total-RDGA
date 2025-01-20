@@ -166,5 +166,5 @@ fn main() {
         .map(|r| r.fitness)
         .unwrap_or(usize::MAX);
 
-    println!("{}", best_fitness);
+    print!("{}", best_fitness);
 }
