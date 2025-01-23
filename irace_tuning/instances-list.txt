@@ -1,10 +1,25 @@
-## This is an example of specifying a list of instances.
-
-# Each line is an instance relative to trainInstancesDir/testInstancesdir
-# unless set to "" (see scenario.txt.tmpl) and an optional sequence of
-# instance-specific parameters that will be passed to target-runner when
-# invoked on that instance.
-
-# Empty lines and comments are ignored.
-
-instances/can___24.txt
+# List of instances for irace
+instances/bcspwr06.txt
+instances/bcspwr07.txt
+instances/brock800-1.txt
+instances/c-fat500-1.txt
+instances/c-fat500-2.txt
+instances/CSphd.txt
+instances/fidap003.txt
+instances/GD98_b.txt
+instances/gre__512.txt
+instances/Harvard500.txt
+instances/jgl009.txt
+instances/keller4.txt
+instances/M20PI_n.txt
+instances/MANN-a45.txt
+instances/MANN-a81.txt
+instances/random_erdos_renyi_0.txt
+instances/random_erdos_renyi_1.txt
+instances/random_erdos_renyi_2.txt
+instances/random_erdos_renyi_3.txt
+instances/random_erdos_renyi_5.txt
+instances/random_watts_strogatz_4.txt
+instances/rgg010.txt
+instances/Stranke94.txt
+instances/Tina_DisCog.txt
