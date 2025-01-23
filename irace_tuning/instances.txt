@@ -1,3 +1,0 @@
-instances/hamming6-4.txt
-instances/johnson8-2-4.txt
-instances/MANN-a9.txt
