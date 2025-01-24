@@ -4,7 +4,7 @@ use rand::seq::IteratorRandom;
 use super::chromosome::Chromosome;
 
 /// Aliases to representation of a Heuristic
-pub type Heuristic = fn(&UndirectedGraph<usize>) -> Chromosome;
+pub type Heuristic = fn(&UndirectedGraph<u32>) -> Chromosome;
 
 /// A heuristic function to generate a `Chromosome` using a randomized approach.
 ///
@@ -18,7 +18,7 @@ pub type Heuristic = fn(&UndirectedGraph<usize>) -> Chromosome;
 ///   - Remaining neighbors are labeled `0`.
 ///   - Isolated vertices are handled separately and assigned labels to satisfy constraints.
 #[must_use]
-pub fn h1(graph: &UndirectedGraph<usize>) -> Chromosome {
+pub fn h1(graph: &UndirectedGraph<u32>) -> Chromosome {
     // Inicializa um vetor de genes com valores 0.
     // O tamanho do vetor é igual ao número de vértices no grafo.
     let mut genes = vec![0u8; graph.order()];
@@ -32,21 +32,21 @@ pub fn h1(graph: &UndirectedGraph<usize>) -> Chromosome {
     // Enquanto o grafo h ainda tiver vértices...
     while let Some(v) = h.vertices().choose(&mut rng).copied() {
         // Passo 4: Define f(v) = 2, marcando o vértice v com a cor 2.
-        genes[v] = 2;
+        genes[v as usize] = 2;
 
         // Obtém os vizinhos de v no grafo `h`.
-        let neighbors: Vec<usize> = h
+        let neighbors: Vec<u32> = h
             .neighbors(&v)
             .map(|n| n.copied().collect())
             .unwrap_or_default();
 
         // Passo 5: Se v tem vizinhos, escolha um (o primeiro da lista) e defina f(u) = 1.
         if let Some(first_neighbor) = neighbors.first() {
-            genes[*first_neighbor] = 1;
+            genes[*first_neighbor as usize] = 1;
 
             // Passo 6: Para os demais vizinhos de v, define f(w) = 0.
             for w in neighbors.iter().skip(1) {
-                genes[*w] = 0;
+                genes[*w as usize] = 0;
             }
         }
 
@@ -60,17 +60,17 @@ pub fn h1(graph: &UndirectedGraph<usize>) -> Chromosome {
         let isolated_vertices = h.get_isolated_vertices();
         for z in isolated_vertices {
             // Caso contrário, define f(z) = 1.
-            genes[z] = 1;
+            genes[z as usize] = 1;
             let has_neighbor_with_1 = graph
                 .neighbors(&z)
-                .is_some_and(|mut neighbors| neighbors.any(|n| genes[*n] == 1));
+                .is_some_and(|mut neighbors| neighbors.any(|n| genes[*n as usize] == 1));
 
             // Verifica se `z` tem vizinhos no grafo original com f = 1.
             if !has_neighbor_with_1 {
                 // Se não há vizinhos com f = 1, escolhe um vizinho com f = 0 e define f = 1.
                 if let Some(mut neighbors) = graph.neighbors(&z) {
-                    if let Some(first) = neighbors.find(|&n| genes[*n] == 0) {
-                        genes[*first] = 1;
+                    if let Some(first) = neighbors.find(|&n| genes[*n as usize] == 0) {
+                        genes[*first as usize] = 1;
                     }
                 }
             }
@@ -114,7 +114,7 @@ pub fn h1(graph: &UndirectedGraph<usize>) -> Chromosome {
 /// This heuristic is similar to `h1`, but it prioritizes vertices with the highest degree
 /// during the selection process, aiming to optimize the influence of the assigned labels.
 #[must_use]
-pub fn h2(graph: &UndirectedGraph<usize>) -> Chromosome {
+pub fn h2(graph: &UndirectedGraph<u32>) -> Chromosome {
     // Inicializa um vetor de genes com valores 0.
     // O tamanho do vetor é igual ao número de vértices no grafo.
     let mut genes = vec![0u8; graph.order()];
@@ -125,21 +125,21 @@ pub fn h2(graph: &UndirectedGraph<usize>) -> Chromosome {
     // Enquanto o grafo h ainda tiver vértices... (Já captura o v = vértice de maior grau do grafo)
     while let Some(v) = h.vertices().max_by_key(|&vertex| h.degree(vertex)).copied() {
         // Passo 4: Define f(v) = 2, marcando o vértice v com a cor 2.
-        genes[v] = 2;
+        genes[v as usize] = 2;
 
         // Obtém os vizinhos de v no grafo `h`.
-        let neighbors: Vec<usize> = h
+        let neighbors: Vec<u32> = h
             .neighbors(&v)
             .map(|n| n.copied().collect())
             .unwrap_or_default();
 
         // Passo 5: Se v tem vizinhos, escolha um (o primeiro da lista) e defina f(u) = 1.
         if let Some(first_neighbor) = neighbors.first() {
-            genes[*first_neighbor] = 1;
+            genes[*first_neighbor as usize] = 1;
 
             // Passo 6: Para os demais vizinhos de v, define f(w) = 0.
             for w in neighbors.iter().skip(1) {
-                genes[*w] = 0;
+                genes[*w as usize] = 0;
             }
         }
 
@@ -152,17 +152,17 @@ pub fn h2(graph: &UndirectedGraph<usize>) -> Chromosome {
         // Passo 8: Enquanto houver vértices isolados em h...
         let isolated_vertices = h.get_isolated_vertices();
         for z in isolated_vertices {
-            genes[z] = 1;
+            genes[z as usize] = 1;
             let has_neighbor_with_1 = graph
                 .neighbors(&z)
-                .is_some_and(|mut neighbors| neighbors.any(|n| genes[*n] == 1));
+                .is_some_and(|mut neighbors| neighbors.any(|n| genes[*n as usize] == 1));
 
             // Verifica se `z` tem vizinhos no grafo original com f = 1.
             if !has_neighbor_with_1 {
                 // Se não há vizinhos com f = 1, escolhe um vizinho com f = 0 e define f = 1.
                 if let Some(mut neighbors) = graph.neighbors(&z) {
-                    if let Some(first) = neighbors.find(|&n| genes[*n] == 0) {
-                        genes[*first] = 1;
+                    if let Some(first) = neighbors.find(|&n| genes[*n as usize] == 0) {
+                        genes[*first as usize] = 1;
                     }
                 }
             }
@@ -205,7 +205,7 @@ pub fn h2(graph: &UndirectedGraph<usize>) -> Chromosome {
 /// - This heuristic refines the approach of `h2` by introducing a sorting step to prioritize neighbors with higher degrees.
 /// - It is particularly useful in graphs where the connectivity of neighbors significantly influences the solution.
 #[must_use]
-pub fn h3(graph: &UndirectedGraph<usize>) -> Chromosome {
+pub fn h3(graph: &UndirectedGraph<u32>) -> Chromosome {
     // Inicializa um vetor de genes com valores 0.
     // O tamanho do vetor é igual ao número de vértices no grafo.
     let mut genes = vec![0u8; graph.order()];
@@ -216,10 +216,10 @@ pub fn h3(graph: &UndirectedGraph<usize>) -> Chromosome {
     // Enquanto o grafo h ainda tiver vértices... (Já captura o v = vértice de maior grau do grafo)
     while let Some(v) = h.vertices().max_by_key(|&vertex| h.degree(vertex)).copied() {
         // Passo 4: Define f(v) = 2, marcando o vértice v com a cor 2.
-        genes[v] = 2;
+        genes[v as usize] = 2;
 
         // Obtém os vizinhos de v no grafo `h`.
-        let mut neighbors: Vec<usize> = h
+        let mut neighbors: Vec<u32> = h
             .neighbors(&v)
             .map(|n| n.copied().collect())
             .unwrap_or_default();
@@ -229,11 +229,11 @@ pub fn h3(graph: &UndirectedGraph<usize>) -> Chromosome {
 
         // Passo 5: Se v tem vizinhos, escolha um (o primeiro da lista, ou seja, o com maior grau) e defina f(u) = 1.
         if let Some(first_neighbor) = neighbors.first() {
-            genes[*first_neighbor] = 1;
+            genes[*first_neighbor as usize] = 1;
 
             // Passo 6: Para os demais vizinhos de v, define f(w) = 0.
             for w in neighbors.iter().skip(1) {
-                genes[*w] = 0;
+                genes[*w as usize] = 0;
             }
         }
 
@@ -247,17 +247,17 @@ pub fn h3(graph: &UndirectedGraph<usize>) -> Chromosome {
         let isolated_vertices = h.get_isolated_vertices();
         for z in isolated_vertices {
             // Caso contrário, define f(z) = 1.
-            genes[z] = 1;
+            genes[z as usize] = 1;
             let has_neighbor_with_1 = graph
                 .neighbors(&z)
-                .is_some_and(|mut neighbors| neighbors.any(|n| genes[*n] == 1));
+                .is_some_and(|mut neighbors| neighbors.any(|n| genes[*n as usize] == 1));
 
             // Verifica se `z` tem vizinhos no grafo original com f = 1.
             if !has_neighbor_with_1 {
                 // Se não há vizinhos com f = 1, escolhe um vizinho com f = 0 e define f = 1.
                 if let Some(mut neighbors) = graph.neighbors(&z) {
-                    if let Some(first) = neighbors.find(|&n| genes[*n] == 0) {
-                        genes[*first] = 1;
+                    if let Some(first) = neighbors.find(|&n| genes[*n as usize] == 0) {
+                        genes[*first as usize] = 1;
                     }
                 }
             }
@@ -299,7 +299,7 @@ pub fn h3(graph: &UndirectedGraph<usize>) -> Chromosome {
 ///   into clusters based on their connections to common neighbors.
 /// - It is particularly useful for graphs with sparse regions or large numbers of isolated vertices.
 #[must_use]
-pub fn h4(graph: &UndirectedGraph<usize>) -> Chromosome {
+pub fn h4(graph: &UndirectedGraph<u32>) -> Chromosome {
     // Inicializa um vetor de genes com valores 0.
     // O tamanho do vetor é igual ao número de vértices no grafo.
     let mut genes = vec![0u8; graph.order()];
@@ -310,10 +310,10 @@ pub fn h4(graph: &UndirectedGraph<usize>) -> Chromosome {
     // Enquanto o grafo h ainda tiver vértices... (Já captura o v = vértice de maior grau do grafo)
     while let Some(v) = h.vertices().max_by_key(|&vertex| h.degree(vertex)).copied() {
         // Passo 4: Define f(v) = 2, marcando o vértice v com a cor 2.
-        genes[v] = 2;
+        genes[v as usize] = 2;
 
         // Obtém os vizinhos de v no grafo `h`.
-        let mut neighbors: Vec<usize> = h
+        let mut neighbors: Vec<u32> = h
             .neighbors(&v)
             .map(|n| n.copied().collect())
             .unwrap_or_default();
@@ -323,11 +323,11 @@ pub fn h4(graph: &UndirectedGraph<usize>) -> Chromosome {
 
         // Passo 5: Se v tem vizinhos, escolha um (o primeiro da lista, ou seja, o com maior grau) e defina f(u) = 1.
         if let Some(first_neighbor) = neighbors.first() {
-            genes[*first_neighbor] = 1;
+            genes[*first_neighbor as usize] = 1;
 
             // Passo 6: Para os demais vizinhos de v, define f(w) = 0.
             for w in neighbors.iter().skip(1) {
-                genes[*w] = 0;
+                genes[*w as usize] = 0;
             }
         }
 
@@ -340,7 +340,7 @@ pub fn h4(graph: &UndirectedGraph<usize>) -> Chromosome {
         // Passo 8-14: Processa vértices isolados
         loop {
             // Encontra vértices isolados em H
-            let isolated: Vec<usize> = h
+            let isolated: Vec<u32> = h
                 .vertices()
                 .filter(|&v| h.degree(v).unwrap_or(0) == 0)
                 .copied()
@@ -351,7 +351,7 @@ pub fn h4(graph: &UndirectedGraph<usize>) -> Chromosome {
             }
 
             // Encontra os vizinhos dos vértices isolados no grafo original
-            let mut ns: Vec<usize> = Vec::new();
+            let mut ns: Vec<u32> = Vec::new();
             for &s in &isolated {
                 ns.extend(
                     graph
@@ -373,23 +373,23 @@ pub fn h4(graph: &UndirectedGraph<usize>) -> Chromosome {
 
                 if isolated_neighbors >= 2 {
                     // Se z tem 2 ou mais vizinhos em S, define f(z) = 2
-                    genes[z] = 2;
+                    genes[z as usize] = 2;
                     // E seus vizinhos em S recebem 0
                     for &s in &isolated {
                         if graph.contains_edge(&z, &s) {
-                            genes[s] = 0;
+                            genes[s as usize] = 0;
                         }
                     }
                 } else {
                     // Caso contrário, também recebe 2
-                    genes[z] = 2;
+                    genes[z as usize] = 2;
                 }
             }
 
             // Pinta com 0 os vértices restantes em S
             for &s in &isolated {
-                if genes[s] == 0 {
-                    genes[s] = 0;
+                if genes[s as usize] == 0 {
+                    genes[s as usize] = 0;
                 }
             }
 
@@ -416,7 +416,7 @@ pub fn h4(graph: &UndirectedGraph<usize>) -> Chromosome {
 /// # Returns
 /// - A `Chromosome` where all genes are assigned the label `1`.
 #[must_use]
-pub fn h5(graph: &UndirectedGraph<usize>) -> Chromosome {
+pub fn h5(graph: &UndirectedGraph<u32>) -> Chromosome {
     // Cria um vetor de genes com todos os vértices rotulados com valor 1;
     let genes: Vec<u8> = vec![1; graph.order()];
     Chromosome::new(genes)

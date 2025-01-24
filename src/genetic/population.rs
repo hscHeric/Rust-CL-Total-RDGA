@@ -44,7 +44,7 @@ impl Population {
     ///   problem-specific constraints.
     #[inline]
     #[must_use]
-    pub fn new(size: usize, heuristics: &[Heuristic], graph: &UndirectedGraph<usize>) -> Self {
+    pub fn new(size: usize, heuristics: &[Heuristic], graph: &UndirectedGraph<u32>) -> Self {
         assert!(
             !heuristics.is_empty(),
             "At least one heuristic must be provided."
@@ -113,7 +113,7 @@ impl Population {
         &mut self,
         selector: &S,
         crossover: &C,
-        graph: &UndirectedGraph<usize>,
+        graph: &UndirectedGraph<u32>,
     ) {
         let mut new_chromosomes: Vec<Chromosome> = Vec::with_capacity(self.size);
 

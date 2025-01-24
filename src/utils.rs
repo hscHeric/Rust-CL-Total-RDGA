@@ -29,11 +29,11 @@ use kambo_graph::{graphs::simple::UndirectedGraph, Graph, GraphMut};
 /// # Panics
 /// This function panics if the input format is invalid.
 #[must_use]
-pub fn build_graph(file_path: &str) -> UndirectedGraph<usize> {
+pub fn build_graph(file_path: &str) -> UndirectedGraph<u32> {
     let file = File::open(file_path).expect("Failed to open the file");
     let reader = io::BufReader::new(file);
 
-    let mut graph = UndirectedGraph::<usize>::new_undirected();
+    let mut graph = UndirectedGraph::<u32>::new_undirected();
 
     for line in reader.lines() {
         let line = match line {
@@ -48,8 +48,8 @@ pub fn build_graph(file_path: &str) -> UndirectedGraph<usize> {
         let parts: Vec<&str> = line.split_whitespace().collect();
         assert!(parts.len() == 2, "Invalid format on line: {line}");
 
-        let u: usize = parts[0].parse().expect("Failed to parse vertex 'u'");
-        let v: usize = parts[1].parse().expect("Failed to parse vertex 'v'");
+        let u: u32 = parts[0].parse().expect("Failed to parse vertex 'u'");
+        let v: u32 = parts[1].parse().expect("Failed to parse vertex 'v'");
 
         graph.add_vertex(u).ok();
         graph.add_vertex(v).ok();
@@ -67,12 +67,12 @@ pub fn build_graph(file_path: &str) -> UndirectedGraph<usize> {
 ///
 /// # Returns
 /// A new `UndirectedGraph<usize>` with normalized indices.
-fn normalize_graph(graph: &UndirectedGraph<usize>) -> UndirectedGraph<usize> {
+fn normalize_graph(graph: &UndirectedGraph<u32>) -> UndirectedGraph<u32> {
     let mut vertex_map = HashMap::new();
     let mut new_index = 0;
 
     // Cria o grafo normalizado
-    let mut normalized_graph = UndirectedGraph::<usize>::new_undirected();
+    let mut normalized_graph = UndirectedGraph::<u32>::new_undirected();
 
     for &vertex in graph.vertices() {
         vertex_map.entry(vertex).or_insert_with(|| {
