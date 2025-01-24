@@ -17,6 +17,18 @@ use log::{debug, error, info, LevelFilter};
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 
 #[derive(Debug)]
+struct AlgorithmParams {
+    max_stagnant: usize,
+    generations: usize,
+    tournament_size: usize,
+    crossover_rate: f64,
+    population_factor: f64,
+    file_path: String,
+    trials: usize,
+    output_file: String,
+}
+
+#[derive(Debug)]
 struct TrialResult {
     graph_name: String,
     node_count: usize,
@@ -25,13 +37,19 @@ struct TrialResult {
     elapsed_micros: u128,
 }
 
-#[derive(Debug)]
-struct AlgorithmParams {
-    max_stagnant: usize,
-    generations: usize,
-    tournament_size: usize,
-    crossover_rate: f64,
-    pop_size: usize,
+impl Default for AlgorithmParams {
+    fn default() -> Self {
+        Self {
+            max_stagnant: 100,
+            generations: 1000,
+            tournament_size: 5,
+            crossover_rate: 0.9,
+            population_factor: 1.5,
+            file_path: String::new(),
+            trials: 1,
+            output_file: String::from("results.csv"),
+        }
+    }
 }
 
 fn setup_logger() -> Result<(), io::Error> {
@@ -57,34 +75,101 @@ fn setup_logger() -> Result<(), io::Error> {
     Ok(())
 }
 
-fn parse_args() -> Result<(String, usize, String, AlgorithmParams), String> {
+fn parse_args() -> Result<AlgorithmParams, String> {
+    let mut params = AlgorithmParams::default();
     let args: Vec<String> = env::args().collect();
-    if args.len() < 4 {
-        return Err(format!(
-            "Usage: {} <file_path> <trials> <output_file> [max_stagnant] [generations] [tournament_size] [crossover_prob] [pop_size]",
-            args[0]
-        ));
+
+    if args.len() < 2 {
+        return Err("Usage: ./cl-total-rdga <graph_file> [options]\n\
+            Options:\n\
+            --crossover VALUE\n\
+            --stagnation VALUE\n\
+            --generations VALUE\n\
+            --population VALUE\n\
+            --tournament VALUE\n\
+            --trials VALUE\n\
+            --output FILE"
+            .to_string());
     }
 
-    let file_path = args[1].clone();
-    let trials = args[2].parse().map_err(|_| "Invalid trials parameter")?;
-    let output_file = args[3].clone();
+    params.file_path = args[1].clone();
 
-    let params = AlgorithmParams {
-        max_stagnant: args.get(4).and_then(|s| s.parse().ok()).unwrap_or(100),
-        generations: args.get(5).and_then(|s| s.parse().ok()).unwrap_or(1000),
-        tournament_size: args.get(6).and_then(|s| s.parse().ok()).unwrap_or(5),
-        crossover_rate: args.get(7).and_then(|s| s.parse().ok()).unwrap_or(0.9),
-        pop_size: args.get(8).and_then(|s| s.parse().ok()).unwrap_or(50),
-    };
+    let mut i = 2;
+    while i < args.len() {
+        match args[i].as_str() {
+            "--crossover" => {
+                if i + 1 < args.len() {
+                    params.crossover_rate = args[i + 1]
+                        .parse()
+                        .map_err(|_| format!("Invalid crossover value: {}", args[i + 1]))?;
+                    i += 2;
+                } else {
+                    return Err("Missing value for --crossover".to_string());
+                }
+            }
+            "--stagnation" => {
+                if i + 1 < args.len() {
+                    params.max_stagnant = args[i + 1]
+                        .parse()
+                        .map_err(|_| format!("Invalid stagnation value: {}", args[i + 1]))?;
+                    i += 2;
+                } else {
+                    return Err("Missing value for --stagnation".to_string());
+                }
+            }
+            "--generations" => {
+                if i + 1 < args.len() {
+                    params.generations = args[i + 1]
+                        .parse()
+                        .map_err(|_| format!("Invalid generations value: {}", args[i + 1]))?;
+                    i += 2;
+                } else {
+                    return Err("Missing value for --generations".to_string());
+                }
+            }
+            "--population" => {
+                if i + 1 < args.len() {
+                    params.population_factor = args[i + 1]
+                        .parse()
+                        .map_err(|_| format!("Invalid population value: {}", args[i + 1]))?;
+                    i += 2;
+                } else {
+                    return Err("Missing value for --population".to_string());
+                }
+            }
+            "--tournament" => {
+                if i + 1 < args.len() {
+                    params.tournament_size = args[i + 1]
+                        .parse()
+                        .map_err(|_| format!("Invalid tournament value: {}", args[i + 1]))?;
+                    i += 2;
+                } else {
+                    return Err("Missing value for --tournament".to_string());
+                }
+            }
+            "--trials" => {
+                if i + 1 < args.len() {
+                    params.trials = args[i + 1]
+                        .parse()
+                        .map_err(|_| format!("Invalid trials value: {}", args[i + 1]))?;
+                    i += 2;
+                } else {
+                    return Err("Missing value for --trials".to_string());
+                }
+            }
+            "--output" => {
+                if i + 1 < args.len() {
+                    params.output_file = args[i + 1].clone();
+                    i += 2;
+                } else {
+                    return Err("Missing value for --output".to_string());
+                }
+            }
+            _ => return Err(format!("Unknown argument: {}", args[i])),
+        }
+    }
 
-    info!(
-        "Parsed arguments - File: {}, Trials: {}, Output: {}",
-        file_path, trials, output_file
-    );
-    debug!("Algorithm parameters: {:?}", params);
-
-    Ok((file_path, trials, output_file, params))
+    Ok(params)
 }
 
 fn write_results_to_csv(results: &[TrialResult], output_file: &str) -> io::Result<()> {
@@ -127,20 +212,18 @@ fn main() {
         exit(1);
     }
 
-    info!("Starting genetic algorithm execution");
-
-    let (file_path, trials, output_file, params) = match parse_args() {
-        Ok(args) => args,
+    let params = match parse_args() {
+        Ok(p) => p,
         Err(e) => {
-            error!("Error parsing arguments: {}", e);
-            eprintln!("Error: {}", e);
+            eprintln!("{}", e);
             exit(1);
         }
     };
 
-    let start_time = Instant::now();
-    info!("Building graph from file: {}", file_path);
-    let graph = build_graph(&file_path);
+    info!("Starting genetic algorithm execution");
+
+    info!("Building graph from file: {}", params.file_path);
+    let graph = build_graph(&params.file_path);
 
     if graph.order() == 0 {
         error!("Graph has no nodes");
@@ -154,11 +237,7 @@ fn main() {
         graph.edge_count()
     );
 
-    let pop_size = if params.pop_size == 0 {
-        ((graph.order() as f64 / 1.5).ceil() as usize).max(1)
-    } else {
-        params.pop_size
-    };
+    let pop_size = (graph.order() as f64 / params.population_factor).round() as usize;
 
     debug!("Using population size: {}", pop_size);
 
@@ -166,10 +245,11 @@ fn main() {
     let crossover = SinglePoint::new(params.crossover_rate);
     let selector = KTournament::new(params.tournament_size);
 
-    info!("Starting {} trials", trials);
-    let results = Mutex::new(Vec::with_capacity(trials));
+    info!("Starting {} trials", params.trials);
+    let results = Mutex::new(Vec::with_capacity(params.trials));
 
-    (0..trials).into_par_iter().for_each(|trial| {
+    let start_time = Instant::now();
+    (0..params.trials).into_par_iter().for_each(|trial| {
         info!("Starting trial {}", trial + 1);
         let trial_start = Instant::now();
 
@@ -216,7 +296,12 @@ fn main() {
         }
 
         let elapsed_time = trial_start.elapsed();
-        let graph_name = file_path.split('/').last().unwrap_or("unknown").to_string();
+        let graph_name = params
+            .file_path
+            .split('/')
+            .last()
+            .unwrap_or("unknown")
+            .to_string();
 
         info!(
             "Trial {} completed - Final fitness: {}, Time: {:?}",
@@ -235,7 +320,7 @@ fn main() {
     });
 
     let results = results.into_inner().unwrap();
-    if let Err(e) = write_results_to_csv(&results, &output_file) {
+    if let Err(e) = write_results_to_csv(&results, &params.output_file) {
         error!("Failed to write results: {}", e);
         eprintln!("Failed to write results to file: {}", e);
         exit(1);
