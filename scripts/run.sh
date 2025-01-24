@@ -22,13 +22,21 @@ skipped_graphs=0
 processed_graphs=0
 start_total_time=$(date +%s)
 
-# Ordenar arquivos por número de linhas e iterar sobre eles
-for graph_file in $(find "$INPUT_DIR" -name "*.txt" -exec wc -l {} + | sort -n | awk '{print $2}' | grep -v "^\$"); do
-  # Extrair o nome do grafo sem o diretório e extensão
+# Iterar sobre todos os arquivos *.txt nas subpastas de INPUT_DIR
+find "$INPUT_DIR" -type f -name "*.txt" | while read -r graph_file; do
+  # Extrair o caminho relativo ao diretório de entrada
+  relative_path="${graph_file#$INPUT_DIR}"
+
+  # Extrair o nome da subpasta (se existir) e do arquivo
   graph_name=$(basename "$graph_file" .txt)
+  subdir=$(dirname "$relative_path")
+
+  # Criar a subpasta correspondente em OUTPUT_DIR
+  output_subdir="$OUTPUT_DIR$subdir"
+  mkdir -p "$output_subdir"
 
   # Definir o arquivo de saída
-  output_file="$OUTPUT_DIR${graph_name}.csv"
+  output_file="$output_subdir/${graph_name}.csv"
 
   # Verificar se o arquivo de saída já existe
   if [ -f "$output_file" ]; then
@@ -46,6 +54,7 @@ for graph_file in $(find "$INPUT_DIR" -name "*.txt" -exec wc -l {} + | sort -n |
 
   # Exibir informações sobre o grafo sendo processado
   echo "[INFO] Processando o grafo: $graph_name"
+  echo "       Subdiretório: $subdir"
   echo "       Número de linhas: $num_lines"
 
   # Marcar o início do tempo de execução
