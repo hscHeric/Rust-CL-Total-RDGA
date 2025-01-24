@@ -18,6 +18,8 @@ mkdir -p "$OUTPUT_DIR"
 # Variáveis para estatísticas
 total_graphs=0
 total_lines=0
+skipped_graphs=0
+processed_graphs=0
 start_total_time=$(date +%s)
 
 # Ordenar arquivos por número de linhas e iterar sobre eles
@@ -27,6 +29,13 @@ for graph_file in $(find "$INPUT_DIR" -name "*.txt" -exec wc -l {} + | sort -n |
 
   # Definir o arquivo de saída
   output_file="$OUTPUT_DIR${graph_name}.csv"
+
+  # Verificar se o arquivo de saída já existe
+  if [ -f "$output_file" ]; then
+    echo "[INFO] Resultado já existe para o grafo: $graph_name. Pulando..."
+    skipped_graphs=$((skipped_graphs + 1))
+    continue
+  fi
 
   # Contar o número de linhas do arquivo
   num_lines=$(wc -l <"$graph_file")
@@ -60,6 +69,8 @@ for graph_file in $(find "$INPUT_DIR" -name "*.txt" -exec wc -l {} + | sort -n |
   echo "[INFO] Tempo de execução para $graph_name: ${elapsed_time}s"
   echo "[INFO] Resultado salvo em: $output_file"
   echo "----------------------------------------"
+
+  processed_graphs=$((processed_graphs + 1))
 done
 
 # Calcular tempo total de execução
@@ -69,7 +80,8 @@ total_elapsed_time=$((end_total_time - start_total_time))
 # Exibir estatísticas finais
 echo "----------------------------------------"
 echo "[INFO] Estatísticas finais"
-echo "       Número total de grafos processados: $total_graphs"
+echo "       Número total de grafos processados: $processed_graphs"
+echo "       Número de grafos pulados: $skipped_graphs"
 echo "       Número total de linhas processadas: $total_lines"
 echo "       Tempo total de execução: ${total_elapsed_time}s"
 echo "----------------------------------------"
