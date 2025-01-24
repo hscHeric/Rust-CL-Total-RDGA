@@ -1,7 +1,9 @@
 use std::{
     env,
+    ffi::OsStr,
     fs::OpenOptions,
     io::{self, Write},
+    path::Path,
     process::exit,
     sync::Mutex,
     time::Instant,
@@ -296,11 +298,10 @@ fn main() {
         }
 
         let elapsed_time = trial_start.elapsed();
-        let graph_name = params
-            .file_path
-            .split('/')
-            .last()
-            .unwrap_or("unknown")
+        let graph_name = Path::new(&params.file_path)
+            .file_stem()
+            .unwrap_or_else(|| OsStr::new("unknown"))
+            .to_string_lossy()
             .to_string();
 
         info!(
