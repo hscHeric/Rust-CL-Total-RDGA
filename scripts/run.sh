@@ -11,6 +11,7 @@ TOURNAMENT_SIZE=8
 CROSSOVER_PROB=0.7905
 POP_SIZE=2.5
 TRIALS=30
+PARALLEL=3
 
 # Criar o diretório de resultados, se não existir
 mkdir -p "$OUTPUT_DIR"
@@ -68,6 +69,7 @@ find "$INPUT_DIR" -type f -name "*.txt" | while read -r graph_file; do
     --population "$POP_SIZE" \
     --tournament "$TOURNAMENT_SIZE" \
     --trials "$TRIALS" \
+    --parallel "$PARALLEL" \
     --output "$output_file"
 
   # Marcar o fim do tempo de execução

@@ -1,5 +1,5 @@
 use std::{
-    env,
+    env::{self},
     ffi::OsStr,
     fs::OpenOptions,
     io::{self, Write},
@@ -14,9 +14,12 @@ use cl_total_rdga::{
     utils::build_graph,
 };
 use env_logger::{Builder, Target};
-use kambo_graph::Graph;
+use kambo_graph::{graphs::simple::UndirectedGraph, Graph};
 use log::{debug, error, info, LevelFilter};
-use rayon::iter::{IntoParallelIterator, ParallelIterator};
+use rayon::{
+    iter::{IntoParallelIterator, ParallelIterator},
+    ThreadPoolBuilder,
+};
 
 #[derive(Debug)]
 struct AlgorithmParams {
@@ -28,6 +31,7 @@ struct AlgorithmParams {
     file_path: String,
     trials: usize,
     output_file: String,
+    num_threads: usize,
 }
 
 #[derive(Debug)]
@@ -50,6 +54,7 @@ impl Default for AlgorithmParams {
             file_path: String::new(),
             trials: 1,
             output_file: String::from("results.csv"),
+            num_threads: 1,
         }
     }
 }
@@ -106,7 +111,17 @@ fn parse_args() -> Result<AlgorithmParams, String> {
                         .map_err(|_| format!("Invalid crossover value: {}", args[i + 1]))?;
                     i += 2;
                 } else {
-                    return Err("Missing value for --crossover".to_string());
+                    params.crossover_rate = 0.75;
+                }
+            }
+            "--parallel" => {
+                if i + 1 < args.len() {
+                    params.num_threads = args[i + 1]
+                        .parse()
+                        .map_err(|_| format!("Invalid num threads value: {}", args[i + 1]))?;
+                    i += 2;
+                } else {
+                    params.num_threads = 1;
                 }
             }
             "--stagnation" => {
@@ -116,7 +131,7 @@ fn parse_args() -> Result<AlgorithmParams, String> {
                         .map_err(|_| format!("Invalid stagnation value: {}", args[i + 1]))?;
                     i += 2;
                 } else {
-                    return Err("Missing value for --stagnation".to_string());
+                    params.max_stagnant = 100;
                 }
             }
             "--generations" => {
@@ -126,7 +141,7 @@ fn parse_args() -> Result<AlgorithmParams, String> {
                         .map_err(|_| format!("Invalid generations value: {}", args[i + 1]))?;
                     i += 2;
                 } else {
-                    return Err("Missing value for --generations".to_string());
+                    params.generations = 1000;
                 }
             }
             "--population" => {
@@ -136,7 +151,7 @@ fn parse_args() -> Result<AlgorithmParams, String> {
                         .map_err(|_| format!("Invalid population value: {}", args[i + 1]))?;
                     i += 2;
                 } else {
-                    return Err("Missing value for --population".to_string());
+                    params.population_factor = 2.5;
                 }
             }
             "--tournament" => {
@@ -146,7 +161,7 @@ fn parse_args() -> Result<AlgorithmParams, String> {
                         .map_err(|_| format!("Invalid tournament value: {}", args[i + 1]))?;
                     i += 2;
                 } else {
-                    return Err("Missing value for --tournament".to_string());
+                    params.tournament_size = 2;
                 }
             }
             "--trials" => {
@@ -243,82 +258,31 @@ fn main() {
 
     debug!("Using population size: {}", pop_size);
 
-    let heuristics: Vec<Heuristic> = vec![h1, h2, h3, h4, h5, h1];
-    let crossover = SinglePoint::new(params.crossover_rate);
-    let selector = KTournament::new(params.tournament_size);
-
     info!("Starting {} trials", params.trials);
     let results = Mutex::new(Vec::with_capacity(params.trials));
 
     let start_time = Instant::now();
-    (0..params.trials).into_par_iter().for_each(|trial| {
-        info!("Starting trial {}", trial + 1);
-        let trial_start = Instant::now();
 
-        let mut population = Population::new(pop_size, &heuristics, &graph);
-        debug!("Initial population created for trial {}", trial + 1);
-
-        let mut best_solution = population
-            .best_chromosome()
-            .expect("Failed to retrieve the best individual")
-            .clone();
-
-        debug!("Initial best fitness: {}", best_solution.fitness());
-
-        let mut stagnant_generations = 0;
-        for generation in 0..params.generations {
-            population.envolve(&selector, &crossover, &graph);
-            let new_best_solution = population
-                .best_chromosome()
-                .expect("Failed to retrieve the best individual")
-                .clone();
-
-            if new_best_solution.fitness() < best_solution.fitness() {
-                debug!(
-                    "Trial {} - Generation {} - New best fitness: {} (improved from {})",
-                    trial + 1,
-                    generation + 1,
-                    new_best_solution.fitness(),
-                    best_solution.fitness()
-                );
-                best_solution = new_best_solution;
-                stagnant_generations = 0;
-            } else {
-                stagnant_generations += 1;
-            }
-
-            if stagnant_generations >= params.max_stagnant {
-                info!(
-                    "Trial {} stopped at generation {} due to stagnation",
-                    trial + 1,
-                    generation + 1
-                );
-                break;
-            }
-        }
-
-        let elapsed_time = trial_start.elapsed();
-        let graph_name = Path::new(&params.file_path)
-            .file_stem()
-            .unwrap_or_else(|| OsStr::new("unknown"))
-            .to_string_lossy()
-            .to_string();
+    if params.num_threads > 1 {
+        // Configurar o pool de threads com o número especificado
+        ThreadPoolBuilder::new()
+            .num_threads(params.num_threads)
+            .build_global()
+            .expect("Error building thread pool");
 
         info!(
-            "Trial {} completed - Final fitness: {}, Time: {:?}",
-            trial + 1,
-            best_solution.fitness(),
-            elapsed_time
+            "Executing trials in parallel using {} threads",
+            params.num_threads
         );
-
-        results.lock().unwrap().push(TrialResult {
-            graph_name,
-            node_count: graph.order(),
-            edge_count: graph.edge_count(),
-            fitness: best_solution.fitness(),
-            elapsed_micros: elapsed_time.as_micros(),
+        (0..params.trials).into_par_iter().for_each(|trial| {
+            execute_trial(trial, &graph, &params, &results);
         });
-    });
+    } else {
+        info!("Executing trials sequentially");
+        for trial in 0..params.trials {
+            execute_trial(trial, &graph, &params, &results);
+        }
+    }
 
     let results = results.into_inner().unwrap();
     if let Err(e) = write_results_to_csv(&results, &params.output_file) {
@@ -336,4 +300,83 @@ fn main() {
         "Execution completed in {:.2} seconds.",
         total_time.as_secs_f64()
     );
+}
+
+fn execute_trial(
+    trial: usize,
+    graph: &UndirectedGraph<u32>,
+    params: &AlgorithmParams,
+    results: &Mutex<Vec<TrialResult>>,
+) {
+    info!("Starting trial {}", trial + 1);
+    let trial_start = Instant::now();
+
+    let heuristics: Vec<Heuristic> = vec![h1, h2, h3, h4, h5, h1];
+    let crossover = SinglePoint::new(params.crossover_rate);
+    let selector = KTournament::new(params.tournament_size);
+    let pop_size = (graph.order() as f64 / params.population_factor).round() as usize;
+
+    let mut population = Population::new(pop_size, &heuristics, graph);
+    debug!("Initial population created for trial {}", trial + 1);
+
+    let mut best_solution = population
+        .best_chromosome()
+        .expect("Failed to retrieve the best individual")
+        .clone();
+
+    debug!("Initial best fitness: {}", best_solution.fitness());
+
+    let mut stagnant_generations = 0;
+    for generation in 0..params.generations {
+        population.envolve(&selector, &crossover, graph);
+        let new_best_solution = population
+            .best_chromosome()
+            .expect("Failed to retrieve the best individual")
+            .clone();
+
+        if new_best_solution.fitness() < best_solution.fitness() {
+            debug!(
+                "Trial {} - Generation {} - New best fitness: {} (improved from {})",
+                trial + 1,
+                generation + 1,
+                new_best_solution.fitness(),
+                best_solution.fitness()
+            );
+            best_solution = new_best_solution;
+            stagnant_generations = 0;
+        } else {
+            stagnant_generations += 1;
+        }
+
+        if stagnant_generations >= params.max_stagnant {
+            info!(
+                "Trial {} stopped at generation {} due to stagnation",
+                trial + 1,
+                generation + 1
+            );
+            break;
+        }
+    }
+
+    let elapsed_time = trial_start.elapsed();
+    let graph_name = Path::new(&params.file_path)
+        .file_stem()
+        .unwrap_or_else(|| OsStr::new("unknown"))
+        .to_string_lossy()
+        .to_string();
+
+    info!(
+        "Trial {} completed - Final fitness: {}, Time: {:?}",
+        trial + 1,
+        best_solution.fitness(),
+        elapsed_time
+    );
+
+    results.lock().unwrap().push(TrialResult {
+        graph_name,
+        node_count: graph.order(),
+        edge_count: graph.edge_count(),
+        fitness: best_solution.fitness(),
+        elapsed_micros: elapsed_time.as_micros(),
+    });
 }
